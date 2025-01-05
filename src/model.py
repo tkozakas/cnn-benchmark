@@ -39,6 +39,6 @@ def save_model(model, path):
     project_root = Path(__file__).parent.parent.resolve()
     trained_dir = project_root / "trained"
     trained_dir.mkdir(parents=True, exist_ok=True)
-    full_path = trained_dir / path
+    full_path = trained_dir / Path(path).name
     torch.save(model.state_dict(), str(full_path))
     print(f"Model saved to {full_path}")
