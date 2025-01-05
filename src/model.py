@@ -1,4 +1,8 @@
+from pathlib import Path
+
+import torch
 import torch.nn as nn
+
 
 class SimpleCNN(nn.Module):
     def __init__(self, num_classes):
@@ -22,3 +26,18 @@ class SimpleCNN(nn.Module):
         x = x.view(x.size(0), -1)  # Flatten
         x = self.fc(x)
         return x
+
+
+def get_model(architecture, model_config):
+    if architecture == "SimpleCNN":
+        return SimpleCNN(**model_config["SimpleCNN"])
+    else:
+        raise ValueError(f"Unknown architecture: {architecture}")
+
+
+def save_model(model, path):
+    project_root = Path(__file__).parent.resolve()
+    full_path = project_root / path
+    full_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(model.state_dict(), str(full_path))
+    print(f"Model saved to {full_path}")
