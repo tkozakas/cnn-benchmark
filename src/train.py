@@ -80,10 +80,10 @@ def train_model(model, train_loader, criterion, optimizer, device,
                   f"Accuracy: {eval_results['accuracy']:.4f}")
 
         if (epoch + 1) % save_interval == 0:
-            save_model(model, f"model_epoch_{epoch + 1}.pth")
+            save_model(model, f"{model.__class__.__name__}_epoch_{epoch + 1}.pth")
 
     print("Finished Training")
-    save_model(model, "model_final.pth")
+    save_model(model, f"../trained/{model.__class__.__name__}_final.pth")
 
 
 def main(params):
