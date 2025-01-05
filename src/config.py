@@ -14,17 +14,16 @@ dataset_config = {
 }
 
 train_config = {
-    'epochs': 10,
+    'epochs': 100,
+    'show_interval': 5,
+    'valid_interval': 20,
+    'save_interval': 20,
     'train_batch_size': 32,
     'eval_batch_size': 512,
     'learning_rate': 0.0005,
-    'show_interval': 5,
-    'valid_interval': 500,
-    'save_interval': 2000,
-    'cpu_workers': 4,
-    'reload_checkpoint': None,
-    'checkpoints_dir': 'checkpoints/'
+    'cpu_workers': 4
 }
+
 
 model_config = {
     "SimpleCNN": {
