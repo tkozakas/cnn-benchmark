@@ -3,10 +3,22 @@ import struct
 
 import numpy as np
 import torch
+import torchvision.transforms as T
 from torch.utils.data import Dataset
 
 from src.config import dataset_config
 
+train_transform = T.Compose([
+    T.ToPILImage(),
+    T.Resize((28, 28)),
+    T.RandomRotation(degrees=90),
+    T.ToTensor()
+])
+test_transform = T.Compose([
+    T.ToPILImage(),
+    T.Resize((28, 28)),
+    T.ToTensor()
+])
 
 class EmnistDataset(Dataset):
     def __init__(self, images, labels, transform=None):
@@ -18,33 +30,19 @@ class EmnistDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
+        def _ensure_tensor(data, dtype):
+            if isinstance(data, torch.Tensor):
+                return data.to(dtype)
+            return torch.tensor(data, dtype=dtype)
+
         image = self.images[idx]
         label = self.labels[idx]
-
-        if image.ndim == 2:  # If shape is (height, width)
-            image = np.expand_dims(image, axis=0)  # Add channel dimension (1, height, width)
-
         if self.transform:
             image = self.transform(image)
+        image = _ensure_tensor(image, torch.float32)
+        label = _ensure_tensor(label, torch.long)
+        return image, label
 
-        # Determine target length
-        if isinstance(label, (list, np.ndarray)):  # Sequence label
-            target_length = len(label)
-        else:  # Single-label classification
-            target_length = 1
-
-        return (
-            torch.tensor(image, dtype=torch.float32),
-            torch.tensor(label, dtype=torch.long),
-            torch.tensor(target_length, dtype=torch.long)
-        )
-
-def preprocess_images(images):
-    if images.ndim == 3:
-        images = np.expand_dims(images, axis=1)
-    elif images.ndim == 4 and images.shape[-1] == 1:
-        images = np.transpose(images, (0, 3, 1, 2))
-    return images
 
 def load_ubyte_file(file_path, is_image=True):
     absolute_root_path = os.path.join(os.path.dirname(__file__), "..", file_path)
@@ -58,15 +56,20 @@ def load_ubyte_file(file_path, is_image=True):
     return data
 
 
+def preprocess_images(images):
+    if images.ndim == 4 and images.shape[-1] == 1:
+        images = np.squeeze(images, axis=-1)
+    return images
+
 def load_dataset(images_path, labels_path):
     images = load_ubyte_file(images_path, is_image=True)
     labels = load_ubyte_file(labels_path, is_image=False)
     return images, labels
 
-
 def load_datasets():
     datasets = {}
     emnist_config = dataset_config["datasets"]["emnist"]["datasets"]
+
     for dataset_name, paths in emnist_config.items():
         print(f"Loading dataset: {dataset_name}")
 
@@ -78,10 +81,14 @@ def load_datasets():
         train_images, train_labels = load_dataset(train_images_path, train_labels_path)
         test_images, test_labels = load_dataset(test_images_path, test_labels_path)
 
+        # Optional: preprocess if needed
         train_images = preprocess_images(train_images)
         test_images = preprocess_images(test_images)
 
-        datasets[dataset_name] = {"train": (train_images, train_labels), "test": (test_images, test_labels)}
+        datasets[dataset_name] = {
+            "train": (train_images, train_labels),
+            "test": (test_images, test_labels)
+        }
 
         print(f"Dataset {dataset_name} loaded: "
               f"{len(train_images)} train samples, {len(test_images)} test samples")

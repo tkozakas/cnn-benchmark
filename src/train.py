@@ -1,32 +1,28 @@
-import argparse
+"""
+Usage:
+    train.py [--architecture=ARCH]
+
+Options:
+    -h --help                     Show this help message.
+    --architecture=ARCH           Model architecture to use (e.g., SimpleCNN, CRNN) [default: SimpleCNN].
+"""
 
 import torch
-from torch.utils.data import DataLoader
+from docopt import docopt
+from torch.utils.data import DataLoader, random_split
 
 from src.config import train_config, model_config
-from src.dataset import EmnistDataset, load_datasets
+from src.dataset import EmnistDataset, load_datasets, train_transform, test_transform
 from src.evaluate import evaluate_simple_cnn
 from src.model import get_model, save_model
-
-
 def train_batch(model, data, optimizer, criterion, device):
     """
     Train the model on a single batch of data.
-
-    Parameters:
-    - model: The model to train.
-    - data: A tuple containing input images, labels, and target lengths.
-    - optimizer: The optimizer used for training.
-    - criterion: The loss function.
-    - device: The device to run computations on.
-
-    Returns:
-    - loss: The loss value for the batch.
     """
-    model.train()  # Ensure the model is in training mode
+    model.train()
 
-    # Unpack the data
-    images, labels, target_lengths = [d.to(device) for d in data]
+    # data is now just (images, labels)
+    images, labels = [d.to(device) for d in data]
 
     # Forward pass
     outputs = model(images)
@@ -35,21 +31,21 @@ def train_batch(model, data, optimizer, criterion, device):
     loss = criterion(outputs, labels)
 
     # Backward pass and optimization
-    optimizer.zero_grad()  # Clear previous gradients
-    loss.backward()  # Compute gradients
-    optimizer.step()  # Update weights
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
 
-    return loss.item()  # Return the loss as a scalar
+    return loss.item()
 
 
-
-def train_model(model, train_loader, criterion, optimizer, device,
+def train_model(model, train_loader, test_loader, validation_loader, criterion, optimizer, device,
                 show_interval, valid_interval, save_interval, epochs=10):
     """
     Train the model on the training set.
     Parameters:
     - model: The model to train.
     - train_loader: DataLoader for the training set.
+    - validation_loader: DataLoader for the validation set.
     - criterion: The loss function.
     - optimizer: The optimizer used for training.
     - device: The device to run the computations on.
@@ -75,8 +71,8 @@ def train_model(model, train_loader, criterion, optimizer, device,
 
         if (epoch + 1) % valid_interval == 0:
             print(f"Evaluating at epoch {epoch + 1}")
-            eval_results = evaluate_simple_cnn(model, train_loader, criterion, device=device)
-            print(f"Validation Loss: {eval_results['loss']:.4f}, "
+            eval_results = evaluate_simple_cnn(model, validation_loader, criterion, device=device)
+            print(f"Test Loss: {eval_results['loss']:.4f}, "
                   f"Accuracy: {eval_results['accuracy']:.4f}")
 
         if (epoch + 1) % save_interval == 0:
@@ -84,9 +80,11 @@ def train_model(model, train_loader, criterion, optimizer, device,
 
     print("Finished Training")
     save_model(model, f"../trained/{model.__class__.__name__}_final.pth")
+    eval_results = evaluate_simple_cnn(model, test_loader, criterion, device=device)
+    print(f"Test Loss: {eval_results['loss']:.4f}, "
+          f"Accuracy: {eval_results['accuracy']:.4f}")
 
-
-def main(params):
+def main(architecture):
     # Load train config
     epochs = train_config["epochs"]
     train_batch_size = train_config["train_batch_size"]
@@ -105,11 +103,20 @@ def main(params):
     datasets = load_datasets()
     train_data = datasets["balanced"]["train"]
     test_data = datasets["balanced"]["test"]
+
     train_images, train_labels = train_data
     test_images, test_labels = test_data
 
-    train_dataset = EmnistDataset(train_images, train_labels)
-    test_dataset = EmnistDataset(test_images, test_labels)
+    full_train_dataset = EmnistDataset(train_images, train_labels, transform=train_transform)
+    test_dataset = EmnistDataset(test_images, test_labels, transform=test_transform)
+
+    # Decide ratio
+    val_ratio = 0.2
+    full_train_size = len(full_train_dataset)
+    val_size = int(full_train_size * val_ratio)
+    train_size = full_train_size - val_size
+
+    train_dataset, validation_dataset = random_split(full_train_dataset, [train_size, val_size])
 
     train_loader = DataLoader(
         train_dataset,
@@ -117,6 +124,14 @@ def main(params):
         shuffle=True,
         num_workers=cpu_workers
     )
+
+    validation_loader = DataLoader(
+        validation_dataset,
+        batch_size=eval_batch_size,
+        shuffle=False,
+        num_workers=cpu_workers
+    )
+
     test_loader = DataLoader(
         test_dataset,
         batch_size=eval_batch_size,
@@ -125,9 +140,9 @@ def main(params):
     )
 
     # Instantiate model
-    model = get_model(params.architecture, model_config)
+    model = get_model(architecture, model_config)
     model.to(device)
-    print(f"Using architecture: {params.architecture}")
+    print(f"Using architecture: {architecture}")
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -139,6 +154,8 @@ def main(params):
     train_model(
         model,
         train_loader,
+        test_loader,
+        validation_loader,
         criterion,
         optimizer,
         device,
@@ -150,12 +167,6 @@ def main(params):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train a model on the EMNIST dataset")
-    parser.add_argument(
-        "--architecture",
-        type=str,
-        default="SimpleCNN",
-        help="Model architecture to use (e.g., SimpleCNN, CRNN). Default is SimpleCNN."
-    )
-    args = parser.parse_args()
-    main(args)
+    arguments = docopt(__doc__)
+    architecture = arguments['--architecture']
+    main(architecture)

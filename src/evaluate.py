@@ -22,7 +22,7 @@ def evaluate_simple_cnn(model, dataloader, criterion, device='cpu'):
     wrong_cases = []
 
     with torch.no_grad():
-        for images, labels, _ in dataloader:
+        for images, labels in dataloader:
             images, labels = images.to(device), labels.to(device)
 
             # Forward pass

@@ -15,15 +15,13 @@ class SimpleCNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
-        self.fc = nn.Sequential(
-            nn.Linear(64 * 7 * 7, 128),
-            nn.ReLU(),
-            nn.Linear(128, num_classes)
-        )
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Linear(64, num_classes)
 
     def forward(self, x):
         x = self.conv(x)
-        x = x.view(x.size(0), -1)  # Flatten
+        x = self.global_pool(x)
+        x = torch.flatten(x, 1)
         x = self.fc(x)
         return x
 
@@ -40,5 +38,8 @@ def save_model(model, path):
     trained_dir = project_root / "trained"
     trained_dir.mkdir(parents=True, exist_ok=True)
     full_path = trained_dir / Path(path).name
-    torch.save(model.state_dict(), str(full_path))
+    torch.save({
+        "architecture": "SimpleCNN",
+        "state_dict": model.state_dict()
+    }, str(full_path))
     print(f"Model saved to {full_path}")
