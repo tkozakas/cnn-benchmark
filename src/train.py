@@ -12,16 +12,12 @@ from docopt import docopt
 from torch import nn, optim
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
-from pathlib import Path
 
-from src.config import train_config, model_config
-from src.model import EmnistCNN, get_model, save_model
+from src.config import train_config
+from src.model import get_model, save_model
 
 
 def train(model, loader, criterion, optimizer, device, epochs):
-    """
-    Train the model on the provided dataset loader.
-    """
     for epoch in range(1, epochs + 1):
         model.train()
         running_loss = 0.0
@@ -46,35 +42,26 @@ def train(model, loader, criterion, optimizer, device, epochs):
         epoch_acc = correct / total
         print(f"Epoch [{epoch}/{epochs}] | Loss: {epoch_loss:.4f} | Accuracy: {epoch_acc:.4f}")
 
-        # Save model at intervals
         if epoch % train_config["save_interval"] == 0:
             save_model(model, f"{model.__class__.__name__}_epoch_{epoch}.pth")
 
 
-def load_emnist_data(batch_size, cpu_workers):
-    """
-    Load the EMNIST dataset and prepare it for training.
-    """
+def load_emnist_data(batch_size, subsample_size, cpu_workers):
     print("Loading EMNIST dataset...")
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
-    dataset = datasets.EMNIST(root="./data", split="letters", train=True, download=True, transform=transform)
-
-    # Optional: Use a subset of the dataset for quicker testing
-    subset_size = 1000
-    dataset, _ = random_split(dataset, [subset_size, len(dataset) - subset_size])
+    dataset = datasets.EMNIST(root="../data", split="letters", train=True, download=True, transform=transform)
+    dataset, _ = random_split(dataset, [subsample_size, len(dataset) - subsample_size])
 
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_workers, pin_memory=True)
     return loader
 
 
 def main(architecture):
-    """
-    Main function for training the specified architecture.
-    """
     # Load configurations
+    subsample_size = train_config["subsample_size"]
     epochs = train_config["epochs"]
     train_batch_size = train_config["train_batch_size"]
     learning_rate = train_config["learning_rate"]
@@ -86,8 +73,9 @@ def main(architecture):
     print(f"Using {torch.cuda.device_count()} GPUs")
 
     # Load data and model
-    loader = load_emnist_data(train_batch_size, cpu_workers)
+    loader = load_emnist_data(train_batch_size, subsample_size, cpu_workers)
     model = get_model(architecture).to(device)
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 

@@ -1,4 +1,5 @@
 train_config = {
+    'subsample_size': 1000,
     'epochs': 50,
     'valid_interval': 5,
     'save_interval': 10,
@@ -25,5 +26,5 @@ path_config = {
     "train_images": "../data/emnist_source_files/emnist-balanced-train-images-idx3-ubyte",
     "train_labels": "../data/emnist_source_files/emnist-balanced-train-labels-idx1-ubyte",
     "test_images": "../data/emnist_source_files/emnist-balanced-test-images-idx3-ubyte",
-    "test_labels": "../data/emnist_source_files/emnist-balanced-test-labels-idx1-ubyte"
+    "test_labels": "../data/emnist_source_files/emnist-balanced-test-labels-idx1-ubyte",
 }
