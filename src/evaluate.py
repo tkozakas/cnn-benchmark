@@ -1,5 +1,4 @@
 import torch
-torch.backends.cudnn.enabled = False
 
 def evaluate_simple_cnn(model, dataloader, criterion, device='cpu'):
     """
@@ -12,7 +11,7 @@ def evaluate_simple_cnn(model, dataloader, criterion, device='cpu'):
     - device: The device to run the computations on.
 
     Returns:
-    - evaluation: A dictionary containing loss, accuracy, and wrong cases.
+    - evaluation: A dictionary containing loss, accuracy
     """
     model.eval()
 

@@ -49,8 +49,13 @@ def train_model(model, train_loader, test_loader, validation_loader, criterion, 
     - save_interval: Interval for saving the model.
     - epochs: The number of epochs to train the model.
     """
-    model.to(device)  # Move model to device
-    model.train()  # Set model to training mode
+    model.to(device)
+    model.train()
+
+    results = {
+        "epoch_loss": [],
+        "epoch_accuracy": []
+    }
 
     for epoch in range(epochs):
         running_loss = 0.0
@@ -67,7 +72,9 @@ def train_model(model, train_loader, test_loader, validation_loader, criterion, 
         if (epoch + 1) % valid_interval == 0:
             print(f"Evaluating at epoch {epoch + 1}")
             eval_results = evaluate_simple_cnn(model, validation_loader, criterion, device=device)
-            print(f"Test Loss: {eval_results['loss']:.4f}, "
+            results["epoch_loss"].append(eval_results["loss"])
+            results["epoch_accuracy"].append(eval_results["accuracy"])
+            print(f"Validation Loss: {eval_results['loss']:.4f}, "
                   f"Accuracy: {eval_results['accuracy']:.4f}")
 
         if (epoch + 1) % save_interval == 0:
@@ -78,7 +85,7 @@ def train_model(model, train_loader, test_loader, validation_loader, criterion, 
     eval_results = evaluate_simple_cnn(model, test_loader, criterion, device=device)
     print(f"Test Loss: {eval_results['loss']:.4f}, "
           f"Accuracy: {eval_results['accuracy']:.4f}")
-
+    return results
 
 def get_emnist_loaders(train_batch_size, eval_batch_size, cpu_workers, val_split=0.2):
     print("Loading EMNIST dataset from provided paths...")
