@@ -1,21 +1,23 @@
 train_config = {
     'epochs': 50,
-    'valid_interval': 5,  # (IN EPOCHS)
-    'save_interval': 10,  # (IN EPOCHS)
-    'show_interval': 50,  # (IN BATCHES)
-    'train_batch_size': 32,  # (INCREASE IF GPU MEMORY ALLOWS)
-    'eval_batch_size': 128,  # (INCREASE IF GPU MEMORY ALLOWS)
-    'learning_rate': 0.0001,  # (ADJUST IF NEEDED)
+    'valid_interval': 5,
+    'save_interval': 10,
+    'show_interval': 50,
+    'train_batch_size': 64,
+    'eval_batch_size': 128,
+    'learning_rate': 0.0005,
     'cpu_workers': 6
 }
 
-
 model_config = {
     "EmnistCNN": {
-        "fmaps1": 64,
+        "fmaps1": 32,
         "fmaps2": 128,
-        "dense": 256,
-        "dropout": 0.3
+        "fmaps3": 256,
+        "dense": 128,
+        "dropout": 0.0,
+        "input_size": 28,
+        "num_classes": 26
     }
 }
 
