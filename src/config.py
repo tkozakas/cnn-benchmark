@@ -1,7 +1,7 @@
 train_config = {
-    'emnist_type': 'balanced',
+    'emnist_type': 'balanced', # ! Need to change number of classes in model_config if changing this
     'subsample_size': 1000,
-    'epochs': 50,
+    'epochs': 500,
     'valid_interval': 5,
     'save_interval': 10,
     'show_interval': 50,
@@ -19,6 +19,6 @@ model_config = {
         "dense": 128,
         "dropout": 0.0,
         "input_size": 28,
-        "num_classes": 26
+        "num_classes": 47
     }
 }
