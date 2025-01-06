@@ -3,7 +3,7 @@ train_config = {
     'subsample_size': 1000,
     'epochs': 500,
     'valid_interval': 5,
-    'save_interval': 10,
+    'save_interval': 250,
     'show_interval': 50,
     'train_batch_size': 64,
     'eval_batch_size': 128,
