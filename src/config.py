@@ -21,10 +21,3 @@ model_config = {
         "num_classes": 26
     }
 }
-
-path_config = {
-    "train_images": "../data/emnist_source_files/emnist-balanced-train-images-idx3-ubyte",
-    "train_labels": "../data/emnist_source_files/emnist-balanced-train-labels-idx1-ubyte",
-    "test_images": "../data/emnist_source_files/emnist-balanced-test-images-idx3-ubyte",
-    "test_labels": "../data/emnist_source_files/emnist-balanced-test-labels-idx1-ubyte",
-}
