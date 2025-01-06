@@ -1,30 +1,16 @@
 import matplotlib.pyplot as plt
 import torch
 
-from src.config import train_config, model_config
+from src.config import train_config
 from src.model import get_model
-from src.train import get_emnist_loaders
-from src.train import train_model
+from src.train import train, load_emnist_data
 
 
-def train_and_evaluate_model(device, loaders, epochs, learning_rate=None):
-    model = get_model("EmnistCNN", model_config)
+def train_and_evaluate_model(model, device, loaders, epochs, learning_rate=None):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate or train_config['learning_rate'])
 
-    results = train_model(
-        model,
-        loaders["train"],
-        loaders["test"],
-        loaders["validation"],
-        criterion,
-        optimizer,
-        device,
-        train_config['show_interval'],
-        train_config['valid_interval'],
-        train_config['save_interval'],
-        epochs=epochs
-    )
+    results = train(model, device, loaders, criterion, optimizer, epochs)
     return model, results
 
 
@@ -40,16 +26,8 @@ def plot_results(epochs, accuracies, losses, title="Training Progress", ylabel="
     plt.show()
 
 
-def epoch_test():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    loaders = get_emnist_loaders(
-        train_batch_size=train_config['train_batch_size'],
-        eval_batch_size=train_config['eval_batch_size'],
-        cpu_workers=train_config['cpu_workers'],
-        val_split=0.2
-    )
-
-    _, results = train_and_evaluate_model(device, loaders, epochs=train_config['epochs'])
+def epoch_test(model, device, loaders, epochs):
+    _, results = train_and_evaluate_model(model, device, loaders, epochs)
     plot_results(
         range(1, train_config['epochs'] + 1),
         results['epoch_accuracy'],
@@ -57,21 +35,14 @@ def epoch_test():
         title="Epoch Test: Accuracy and Loss vs. Epochs"
     )
 
-def learning_rate_test():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def learning_rate_test(model, device, loaders, epochs):
     learning_rates = [0.001, 0.01, 0.1, 0.0001]
     results = {}
 
-    loaders = get_emnist_loaders(
-        train_batch_size=train_config['train_batch_size'],
-        eval_batch_size=train_config['eval_batch_size'],
-        cpu_workers=train_config['cpu_workers'],
-        val_split=0.2
-    )
-
     for lr in learning_rates:
         print(f"Testing learning rate: {lr}")
-        _, lr_results = train_and_evaluate_model(device, loaders, epochs=train_config['epochs'], learning_rate=lr)
+        _, lr_results = train_and_evaluate_model(model, device, loaders, epochs, learning_rate=lr)
         results[lr] = lr_results
 
     epochs = range(1, train_config['epochs'] + 1)
@@ -91,9 +62,17 @@ def main():
     print(f"Device: {device}")
     print(f"Using {torch.cuda.device_count()} GPUs")
 
+    model = get_model("EmnistCNN").to(device)
+    loaders = load_emnist_data(
+        train_config['emnist_type'],
+        train_config['train_batch_size'],
+        train_config['subsample_size'],
+        train_config['cpu_workers']
+    )
+
     # Execute Tests
-    epoch_test()
-    learning_rate_test()
+    epoch_test(model, device, loaders, train_config['epochs'])
+    learning_rate_test(model, device, loaders, train_config['epochs'])
 
 
 if __name__ == "__main__":

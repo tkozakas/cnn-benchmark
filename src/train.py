@@ -60,29 +60,26 @@ def load_emnist_data(emnist_type, batch_size, subsample_size, cpu_workers):
 
 
 def main(architecture):
-    # Load configurations
-    emnist_type = train_config["emnist_type"]
-    subsample_size = train_config["subsample_size"]
-    epochs = train_config["epochs"]
-    train_batch_size = train_config["train_batch_size"]
-    learning_rate = train_config["learning_rate"]
-    cpu_workers = train_config["cpu_workers"]
-
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     print(f"Using {torch.cuda.device_count()} GPUs")
 
     # Load data and model
-    loader = load_emnist_data(emnist_type, train_batch_size, subsample_size, cpu_workers)
+    loader = load_emnist_data(
+        train_config["emnist_type"],
+        train_config["train_batch_size"],
+        train_config["subsample_size"],
+        train_config["cpu_workers"]
+    )
+
     model = get_model(architecture).to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
 
     # Start training
-    train(model, loader, criterion, optimizer, device, epochs)
-
+    train(model, loader, criterion, optimizer, device, train_config["epochs"])
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
