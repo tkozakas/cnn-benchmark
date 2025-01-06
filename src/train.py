@@ -46,13 +46,13 @@ def train(model, loader, criterion, optimizer, device, epochs):
             save_model(model, f"{model.__class__.__name__}_epoch_{epoch}.pth")
 
 
-def load_emnist_data(batch_size, subsample_size, cpu_workers):
+def load_emnist_data(emnist_type, batch_size, subsample_size, cpu_workers):
     print("Loading EMNIST dataset...")
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
-    dataset = datasets.EMNIST(root="../data", split="letters", train=True, download=True, transform=transform)
+    dataset = datasets.EMNIST(root="../data", split=emnist_type, train=True, download=True, transform=transform)
     dataset, _ = random_split(dataset, [subsample_size, len(dataset) - subsample_size])
 
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=cpu_workers, pin_memory=True)
@@ -61,6 +61,7 @@ def load_emnist_data(batch_size, subsample_size, cpu_workers):
 
 def main(architecture):
     # Load configurations
+    emnist_type = train_config["emnist_type"]
     subsample_size = train_config["subsample_size"]
     epochs = train_config["epochs"]
     train_batch_size = train_config["train_batch_size"]
@@ -73,7 +74,7 @@ def main(architecture):
     print(f"Using {torch.cuda.device_count()} GPUs")
 
     # Load data and model
-    loader = load_emnist_data(train_batch_size, subsample_size, cpu_workers)
+    loader = load_emnist_data(emnist_type, train_batch_size, subsample_size, cpu_workers)
     model = get_model(architecture).to(device)
 
     criterion = nn.CrossEntropyLoss()
