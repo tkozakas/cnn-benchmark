@@ -1,4 +1,5 @@
 train_config = {
+    'emnist_type': 'balanced',
     'subsample_size': 1000,
     'epochs': 50,
     'valid_interval': 5,
