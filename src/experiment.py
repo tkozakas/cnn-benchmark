@@ -1,17 +1,10 @@
 import matplotlib.pyplot as plt
 import torch
+from torch import optim, nn
 
 from src.config import train_config
 from src.model import get_model
 from src.train import train, load_emnist_data
-
-
-def train_and_evaluate_model(model, device, loaders, epochs, learning_rate=None):
-    criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate or train_config['learning_rate'])
-
-    results = train(model, device, loaders, criterion, optimizer, epochs)
-    return model, results
 
 
 def plot_results(epochs, accuracies, losses, title="Training Progress", ylabel="Metric"):
@@ -26,26 +19,26 @@ def plot_results(epochs, accuracies, losses, title="Training Progress", ylabel="
     plt.show()
 
 
-def epoch_test(model, device, loaders, epochs):
-    _, results = train_and_evaluate_model(model, device, loaders, epochs)
+def epoch_test(model, device, loaders, criterion, optimizer, epochs):
+    results = train(model, device, loaders, criterion, optimizer, epochs)
     plot_results(
-        range(1, train_config['epochs'] + 1),
+        range(1, epochs + 1),
         results['epoch_accuracy'],
         results['epoch_loss'],
         title="Epoch Test: Accuracy and Loss vs. Epochs"
     )
 
 
-def learning_rate_test(model, device, loaders, epochs):
+def learning_rate_test(model, device, loaders, criterion, optimizer, epochs):
     learning_rates = [0.001, 0.01, 0.1, 0.0001]
     results = {}
 
     for lr in learning_rates:
         print(f"Testing learning rate: {lr}")
-        _, lr_results = train_and_evaluate_model(model, device, loaders, epochs, learning_rate=lr)
+        lr_results = train(model, device, loaders, criterion, optimizer, epochs)
         results[lr] = lr_results
 
-    epochs = range(1, train_config['epochs'] + 1)
+    epochs = range(1, epochs + 1)
     for lr in learning_rates:
         plt.plot(epochs, results[lr]['epoch_accuracy'], label=f'LR={lr}')
 
@@ -57,23 +50,30 @@ def learning_rate_test(model, device, loaders, epochs):
     plt.show()
 
 
-def main():
+def configure_test(architecture):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     print(f"Using {torch.cuda.device_count()} GPUs")
-
-    model = get_model("EmnistCNN").to(device)
+    # Load data and model
     loaders = load_emnist_data(
-        train_config['emnist_type'],
-        train_config['train_batch_size'],
-        train_config['subsample_size'],
-        train_config['cpu_workers']
+        train_config["emnist_type"],
+        train_config["train_batch_size"],
+        train_config["subsample_size"],
+        train_config["cpu_workers"]
     )
+    model = get_model(architecture).to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
+    return criterion, device, loaders, model, optimizer
 
-    # Execute Tests
-    epoch_test(model, device, loaders, train_config['epochs'])
-    learning_rate_test(model, device, loaders, train_config['epochs'])
+
+def main(architecture):
+    test_epoch = 500
+
+    criterion, device, loaders, model, optimizer = configure_test(architecture)
+    epoch_test(model, device, loaders, criterion, optimizer, test_epoch)
+    learning_rate_test(model, device, loaders, criterion, optimizer, test_epoch)
 
 
 if __name__ == "__main__":
-    main()
+    main("EmnistCNN")
