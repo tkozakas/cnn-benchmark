@@ -83,8 +83,5 @@ def save_model(model, path):
     trained_dir = project_root / "trained"
     trained_dir.mkdir(parents=True, exist_ok=True)
     full_path = trained_dir / Path(path).name
-    torch.save({
-        "architecture": "EMNISTCNN",
-        "state_dict": model.state_dict()
-    }, str(full_path))
+    torch.save(model.state_dict(), full_path)
     print(f"Model saved to {full_path}")

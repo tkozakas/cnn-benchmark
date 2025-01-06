@@ -1,66 +1,86 @@
 """
+Predict the classes of segmented characters from an input image using a trained PyTorch model,
+showing each segmented character alongside its predicted label, and drawing bounding boxes on
+the original image to indicate where each character was found.
+
 Usage:
-    predict.py MODEL_PATH DEVICE
+  predict.py <model_path> <image_path> [--device=<device>]
 
 Options:
-    -h --help                     Show this help message.
-    MODEL_PATH                    Path to the trained model.
-    DEVICE                        Device to run the model on (e.g., cpu, cuda).
+  <model_path>       Path to the trained PyTorch model file.
+  <image_path>       Path to the input image.
+  --device=<device>  Device to use for prediction (default: "cuda" if available, else "cpu").
 """
 
-import os
-import sys
-
-import matplotlib.pyplot as plt
+import cv2
 import torch
-import torchvision.transforms as T
+from docopt import docopt
+from torchvision import transforms
 from PIL import Image
-from skimage.color import label2rgb
+import numpy as np
+import matplotlib.pyplot as plt
 from skimage.filters import threshold_otsu
 from skimage.measure import label, regionprops
-
-from src.config import model_config
+from skimage.color import label2rgb
 from src.model import get_model
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-MAPPING_FILE = os.path.join(PROJECT_ROOT, "data/emnist-balanced-mapping.txt")
-DEMO_FOLDER = os.path.join(PROJECT_ROOT, "demo")
-PREDICTION_FOLDER = os.path.join(PROJECT_ROOT, "demo/predictions")
-MODEL_ARCHITECTURE = "EMNISTCNN"
 
-def load_label_map(mapping_file_path):
-    label_map = []
-    with open(mapping_file_path, "r") as f:
-        for line in f:
-            parts = line.strip().split()
-            idx, ascii_val = int(parts[0]), int(parts[1])
-            c = chr(ascii_val)
-            if len(label_map) <= idx:
-                label_map.extend(["?"] * (idx - len(label_map) + 1))
-            label_map[idx] = c
-    return label_map
-
-
-def load_model(model_path, architecture, config, device="cpu"):
-    model = get_model(architecture, config)
-    checkpoint = torch.load(model_path, map_location=device)
-    model.load_state_dict(checkpoint["state_dict"])
-    model.to(device)
+def load_model(model_path, device):
+    """
+    Load the trained PyTorch model.
+    """
+    model = get_model("EmnistCNN").to(device)
+    model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     return model
 
 
+def preprocess_image(image, device):
+    """
+    Preprocess a single image for the model.
+    """
+    transform = transforms.Compose([
+        transforms.Resize((28, 28)),  # Ensure size is 28x28
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
+    return transform(image).unsqueeze(0).to(device)
+
+
 def segment_characters(image_path, debug=False):
-    to_gray = T.Compose([T.Grayscale(num_output_channels=1), T.ToTensor()])
+    """
+    Segment characters from the input image using skimage methods.
+
+    Args:
+        image_path (str): Path to the input image.
+        debug (bool): Whether to save debugging visualizations.
+
+    Returns:
+        segments (list): List of segmented character images.
+        bounding_boxes (list): List of bounding box coordinates (minr, minc, maxr, maxc).
+    """
+    import os
+
+    to_gray = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor()])
     image = Image.open(image_path).convert("RGB")
     gray = to_gray(image).squeeze(0).numpy()
     binary = gray > threshold_otsu(gray)
+
+    # Ensure binary is converted to an integer array for labeling
+    binary = np.asarray(binary, dtype=np.uint8)
+
+    # Create labeled regions
     labeled = label(binary)
+
+    # Validate labeled output
+    if not isinstance(labeled, np.ndarray):
+        raise ValueError("Unexpected output from 'label': expected a numpy array.")
+
     props = regionprops(labeled)
     segments = []
 
     if debug:
-        os.makedirs(PREDICTION_FOLDER, exist_ok=True)
+        os.makedirs("../predictions", exist_ok=True)
         labeled_rgb = label2rgb(labeled, image=gray, bg_label=0)
         plt.figure(figsize=(10, 6))
         plt.imshow(labeled_rgb, cmap="gray")
@@ -71,43 +91,76 @@ def segment_characters(image_path, debug=False):
             )
         plt.title(f"Bounding Boxes for {os.path.basename(image_path)}")
         plt.axis("off")
-        plt.savefig(os.path.join(PREDICTION_FOLDER, f"bounding_boxes_{os.path.basename(image_path)}.png"))
+        plt.savefig(os.path.join("../predictions", f"bounding_boxes_{os.path.basename(image_path)}.png"))
         plt.close()
 
+    bounding_boxes = []
     for i, region in enumerate(props):
-        r0, c0, r1, c1 = region.bbox
-        crop = gray[r0:r1, c0:c1]
-        crop_img = Image.fromarray((crop * 255).astype("uint8"))
+        minr, minc, maxr, maxc = region.bbox
+        crop = gray[minr:maxr, minc:maxc]
+        crop_img = Image.fromarray((crop * 255).astype("uint8")).resize((28, 28), Image.Resampling.LANCZOS)
         if debug:
-            crop_img.save(os.path.join(PREDICTION_FOLDER, f"segment_{i}_{os.path.basename(image_path)}"))
+            crop_img.save(os.path.join("../predictions", f"segment_{i}_{os.path.basename(image_path)}"))
         segments.append(crop_img)
+        bounding_boxes.append((minr, minc, maxr, maxc))
 
-    return segments
+    return segments, bounding_boxes
 
 
-def predict_characters(model, char_images, label_map, device="cpu"):
-    tform = T.Compose([T.Resize((28, 28)), T.ToTensor()])
-    result = []
+def predict(model, image_tensor):
+    """
+    Predict the class of a single segmented character image.
+    """
     with torch.no_grad():
-        for i, img in enumerate(char_images):
-            x = tform(img).unsqueeze(0).to(device)
-            logits = model(x)
-            _, idx = logits.max(dim=1)
-            idx = idx.item()
-            result.append(label_map[idx])
-    return "".join(result)
-
-
-def main(model_path, device="cpu"):
-    label_map = load_label_map(MAPPING_FILE)
-    model = load_model(model_path, MODEL_ARCHITECTURE, model_config[MODEL_ARCHITECTURE], device=device)
-    for f in os.listdir(DEMO_FOLDER):
-        path = os.path.join(DEMO_FOLDER, f)
-        if os.path.isfile(path):
-            chars = segment_characters(path, debug=True)
-            text = predict_characters(model, chars, label_map, device=device)
-            print(f"{f}: {text}")
+        outputs = model(image_tensor)
+    return outputs.argmax(dim=1).item()
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    # Parse command-line arguments
+    args = docopt(__doc__)
+    model_path = args["<model_path>"]
+    image_path = args["<image_path>"]
+    device = args["--device"] or ("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Load the trained model
+    model = load_model(model_path, device)
+
+    # Segment characters and get bounding boxes
+    segmented_images, bounding_boxes = segment_characters(image_path)
+
+    # Predict each segmented character
+    predictions = []
+    for char_image in segmented_images:
+        # Preprocess the segmented character
+        image_tensor = preprocess_image(char_image, device)
+        # Predict the class
+        prediction = predict(model, image_tensor)
+        predictions.append(prediction)
+
+    # Print predicted classes
+    print(f"Predicted Classes: {predictions}")
+
+    # Visualize results
+    original_image = cv2.imread(image_path)
+    for (minr, minc, maxr, maxc), pred in zip(bounding_boxes, predictions):
+        # Draw bounding boxes and predictions
+        cv2.rectangle(original_image, (minc, minr), (maxc, maxr), (0, 255, 0), 2)
+        cv2.putText(original_image, str(pred), (minc, minr - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+    # Show the original image with predictions
+    plt.figure(figsize=(12, 6))
+    plt.imshow(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
+    plt.title("Predictions with Bounding Boxes")
+    plt.axis("off")
+    plt.show()
+
+    # Show segmented characters with predictions
+    plt.figure(figsize=(len(segmented_images) * 2, 4))
+    for i, (char_image, pred) in enumerate(zip(segmented_images, predictions)):
+        plt.subplot(1, len(segmented_images), i + 1)
+        plt.imshow(char_image, cmap="gray")
+        plt.title(f"Pred: {pred}")
+        plt.axis("off")
+    plt.tight_layout()
+    plt.show()
