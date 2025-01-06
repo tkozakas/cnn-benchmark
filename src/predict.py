@@ -1,18 +1,32 @@
+"""
+Usage:
+    predict.py MODEL_PATH DEVICE
+
+Options:
+    -h --help                     Show this help message.
+    MODEL_PATH                    Path to the trained model.
+    DEVICE                        Device to run the model on (e.g., cpu, cuda).
+"""
+
 import os
 import sys
+
+import matplotlib.pyplot as plt
 import torch
 import torchvision.transforms as T
 from PIL import Image
+from skimage.color import label2rgb
 from skimage.filters import threshold_otsu
 from skimage.measure import label, regionprops
-import matplotlib.pyplot as plt
-from skimage.color import label2rgb
-from src.model import SimpleCNN
+
+from src.config import model_config
+from src.model import get_model
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MAPPING_FILE = os.path.join(PROJECT_ROOT, "data/emnist-balanced-mapping.txt")
 DEMO_FOLDER = os.path.join(PROJECT_ROOT, "demo")
 PREDICTION_FOLDER = os.path.join(PROJECT_ROOT, "demo/predictions")
+MODEL_ARCHITECTURE = "EMNISTCNN"
 
 def load_label_map(mapping_file_path):
     label_map = []
@@ -26,13 +40,15 @@ def load_label_map(mapping_file_path):
             label_map[idx] = c
     return label_map
 
-def load_model(model_path, num_classes, device="cpu"):
-    model = SimpleCNN(num_classes=num_classes)
+
+def load_model(model_path, architecture, config, device="cpu"):
+    model = get_model(architecture, config)
     checkpoint = torch.load(model_path, map_location=device)
     model.load_state_dict(checkpoint["state_dict"])
     model.to(device)
     model.eval()
     return model
+
 
 def segment_characters(image_path, debug=False):
     to_gray = T.Compose([T.Grayscale(num_output_channels=1), T.ToTensor()])
@@ -68,6 +84,7 @@ def segment_characters(image_path, debug=False):
 
     return segments
 
+
 def predict_characters(model, char_images, label_map, device="cpu"):
     tform = T.Compose([T.Resize((28, 28)), T.ToTensor()])
     result = []
@@ -80,9 +97,10 @@ def predict_characters(model, char_images, label_map, device="cpu"):
             result.append(label_map[idx])
     return "".join(result)
 
+
 def main(model_path, device="cpu"):
     label_map = load_label_map(MAPPING_FILE)
-    model = load_model(model_path, len(label_map), device=device)
+    model = load_model(model_path, MODEL_ARCHITECTURE, model_config[MODEL_ARCHITECTURE], device=device)
     for f in os.listdir(DEMO_FOLDER):
         path = os.path.join(DEMO_FOLDER, f)
         if os.path.isfile(path):
@@ -90,8 +108,6 @@ def main(model_path, device="cpu"):
             text = predict_characters(model, chars, label_map, device=device)
             print(f"{f}: {text}")
 
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python predict.py <model_path> <device>")
-        sys.exit(1)
     main(sys.argv[1], sys.argv[2])

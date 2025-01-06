@@ -4,33 +4,28 @@ Usage:
 
 Options:
     -h --help                     Show this help message.
-    --architecture=ARCH           Model architecture to use (e.g., SimpleCNN, CRNN) [default: SimpleCNN].
+    --architecture=ARCH           Model architecture to use (e.g., EmnistCNN, CRNN) [default: EmnistCNN].
 """
 
+import idx2numpy
 import torch
 from docopt import docopt
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import TensorDataset, DataLoader
 
-from src.config import train_config, model_config
-from src.dataset import EmnistDataset, load_datasets, train_transform, test_transform
+from src.config import train_config, model_config, path_config
 from src.evaluate import evaluate_simple_cnn
 from src.model import get_model, save_model
+
+
 def train_batch(model, data, optimizer, criterion, device):
     """
     Train the model on a single batch of data.
     """
     model.train()
-
-    # data is now just (images, labels)
     images, labels = [d.to(device) for d in data]
-
-    # Forward pass
     outputs = model(images)
-
-    # Calculate loss
     loss = criterion(outputs, labels)
 
-    # Backward pass and optimization
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
@@ -84,8 +79,50 @@ def train_model(model, train_loader, test_loader, validation_loader, criterion, 
     print(f"Test Loss: {eval_results['loss']:.4f}, "
           f"Accuracy: {eval_results['accuracy']:.4f}")
 
+
+def get_emnist_loaders(train_batch_size, eval_batch_size, cpu_workers, val_split=0.2):
+    print("Loading EMNIST dataset from provided paths...")
+
+    # Load data using idx2numpy
+    train_images = idx2numpy.convert_from_file(path_config["train_images"])
+    train_labels = idx2numpy.convert_from_file(path_config["train_labels"])
+    test_images = idx2numpy.convert_from_file(path_config["test_images"])
+    test_labels = idx2numpy.convert_from_file(path_config["test_labels"])
+
+    # Normalize and reshape images
+    train_images = torch.tensor((train_images / 255.0 - 0.5).reshape(len(train_images), 1, 28, 28)).float()
+    train_labels = torch.tensor(train_labels.astype('int64'))
+    test_images = torch.tensor((test_images / 255.0 - 0.5).reshape(len(test_images), 1, 28, 28)).float()
+    test_labels = torch.tensor(test_labels.astype('int64'))
+
+    # Split training data into training and validation sets
+    num_train = len(train_labels)
+    num_val = int(num_train * val_split)
+    num_actual_train = num_train - num_val
+
+    valid_images = train_images[num_actual_train:]
+    valid_labels = train_labels[num_actual_train:]
+    train_images = train_images[:num_actual_train]
+    train_labels = train_labels[:num_actual_train]
+
+    # Create TensorDatasets
+    train_dataset = TensorDataset(train_images, train_labels)
+    valid_dataset = TensorDataset(valid_images, valid_labels)
+    test_dataset = TensorDataset(test_images, test_labels)
+
+    # Create DataLoaders
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True, num_workers=cpu_workers)
+    validation_loader = DataLoader(valid_dataset, batch_size=eval_batch_size, shuffle=False, num_workers=cpu_workers)
+    test_loader = DataLoader(test_dataset, batch_size=eval_batch_size, shuffle=False, num_workers=cpu_workers)
+
+    return {
+        "train": train_loader,
+        "validation": validation_loader,
+        "test": test_loader
+    }
+
+
 def main(architecture):
-    # Load train config
     epochs = train_config["epochs"]
     train_batch_size = train_config["train_batch_size"]
     eval_batch_size = train_config["eval_batch_size"]
@@ -99,45 +136,15 @@ def main(architecture):
     print(f"Device: {device}")
     print(f"Using {torch.cuda.device_count()} GPUs")
 
-    # Load data
-    datasets = load_datasets()
-    train_data = datasets["balanced"]["train"]
-    test_data = datasets["balanced"]["test"]
-
-    train_images, train_labels = train_data
-    test_images, test_labels = test_data
-
-    full_train_dataset = EmnistDataset(train_images, train_labels, transform=train_transform)
-    test_dataset = EmnistDataset(test_images, test_labels, transform=test_transform)
-
-    # Decide ratio
-    val_ratio = 0.2
-    full_train_size = len(full_train_dataset)
-    val_size = int(full_train_size * val_ratio)
-    train_size = full_train_size - val_size
-
-    train_dataset, validation_dataset = random_split(full_train_dataset, [train_size, val_size])
-
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=train_batch_size,
-        shuffle=True,
-        num_workers=cpu_workers
+    loaders = get_emnist_loaders(
+        train_batch_size=train_batch_size,
+        eval_batch_size=eval_batch_size,
+        cpu_workers=cpu_workers,
+        val_split=0.2
     )
-
-    validation_loader = DataLoader(
-        validation_dataset,
-        batch_size=eval_batch_size,
-        shuffle=False,
-        num_workers=cpu_workers
-    )
-
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=eval_batch_size,
-        shuffle=False,
-        num_workers=cpu_workers
-    )
+    train_loader = loaders["train"]
+    validation_loader = loaders["validation"]
+    test_loader = loaders["test"]
 
     # Instantiate model
     model = get_model(architecture, model_config)
