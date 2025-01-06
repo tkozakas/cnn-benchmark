@@ -8,6 +8,7 @@ Options:
 """
 import torch
 from docopt import docopt
+from matplotlib import pyplot as plt
 from torch import nn, optim
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
@@ -21,7 +22,12 @@ def train(model, loaders, criterion, optimizer, device, epochs):
     val_loader = loaders["validation"]
     test_loader = loaders["test"]
 
-    results = {"epoch_loss": [], "epoch_accuracy": []}
+    results = {
+        "epoch_loss": [],
+        "epoch_accuracy": [],
+        "val_loss": [],
+        "val_accuracy": []
+    }
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -47,12 +53,60 @@ def train(model, loaders, criterion, optimizer, device, epochs):
         epoch_acc = correct / total
         results["epoch_loss"].append(epoch_loss)
         results["epoch_accuracy"].append(epoch_acc)
-        print(f"Epoch [{epoch}/{epochs}] | Loss: {epoch_loss:.4f} | Accuracy: {epoch_acc:.4f}")
 
+        # Validation phase using the evaluate function
+        val_loss, val_acc = evaluate(model, val_loader, criterion, device)
+        results["val_loss"].append(val_loss)
+        results["val_accuracy"].append(val_acc)
+
+        # Print epoch results
+        print(f"Epoch [{epoch}/{epochs}] | "
+              f"Train Loss: {epoch_loss:.4f} | Train Accuracy: {epoch_acc:.4f} | "
+              f"Val Loss: {val_loss:.4f} | Val Accuracy: {val_acc:.4f}")
+
+        # Save model at intervals
         if epoch % train_config["save_interval"] == 0:
             save_model(model, f"{model.__class__.__name__}_epoch_{epoch}.pth")
 
+    # Evaluate on the test set
+    test_loss, test_acc = evaluate(model, test_loader, criterion, device)
+    print(f"Test Loss: {test_loss:.4f} | Test Accuracy: {test_acc:.4f}")
     return results
+
+def evaluate(model, loader, criterion, device):
+    model.eval()  # Set the model to evaluation mode
+    running_loss = 0.0
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for images, labels in loader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+            running_loss += loss.item() * images.size(0)
+            predictions = outputs.argmax(dim=1)
+            correct += (predictions == labels).sum().item()
+            total += images.size(0)
+
+    loss = running_loss / total
+    accuracy = correct / total
+    return loss, accuracy
+
+
+def plot_results(epochs, train_accuracies, train_losses, val_accuracies, val_losses):
+    plt.figure(figsize=(12, 6))
+    plt.plot(epochs, train_accuracies, label="Train Accuracy")
+    plt.plot(epochs, val_accuracies, label="Validation Accuracy", linestyle="--")
+    plt.plot(epochs, train_losses, label="Train Loss")
+    plt.plot(epochs, val_losses, label="Validation Loss", linestyle="--")
+    plt.title("Training and Validation Metrics")
+    plt.xlabel("Epochs")
+    plt.ylabel("Metric")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 
 def load_emnist_data(emnist_type, batch_size, subsample_size, cpu_workers, val_split=0.2):
@@ -84,7 +138,14 @@ def load_emnist_data(emnist_type, batch_size, subsample_size, cpu_workers, val_s
 
 def main(architecture):
     criterion, device, loaders, model, optimizer = configure_training(architecture)
-    train(model, loaders, criterion, optimizer, device, train_config["epochs"])
+    results = train(model, loaders, criterion, optimizer, device, train_config["epochs"])
+    plot_results(
+        range(1, train_config["epochs"] + 1),
+        results["epoch_accuracy"],
+        results["epoch_loss"],
+        results["val_accuracy"],
+        results["val_loss"]
+    )
 
 
 def configure_training(architecture):
