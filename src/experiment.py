@@ -19,28 +19,32 @@ def plot_results(epochs, accuracies, losses, title="Training Progress", ylabel="
     plt.show()
 
 
-def epoch_test(model, device, loaders, criterion, optimizer, epochs):
-    results = train(model, device, loaders, criterion, optimizer, epochs)
+def epoch_test(architecture, device, loaders, criterion, epochs):
+    model = get_model(architecture).to(device)
+    optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
+    results = train(model, loaders, criterion, optimizer, device, epochs)
     plot_results(
         range(1, epochs + 1),
         results['epoch_accuracy'],
         results['epoch_loss'],
-        title="Epoch Test: Accuracy and Loss vs. Epochs"
+        title=f"Epoch Test: Accuracy and Loss vs. Epochs (lr={train_config['learning_rate']})",
     )
 
 
-def learning_rate_test(model, device, loaders, criterion, optimizer, epochs):
-    learning_rates = [0.001, 0.01, 0.1, 0.0001]
+def learning_rate_test(architecture, device, loaders, criterion, epochs):
+    learning_rates = [0.0001, 0.001, 0.01, 0.1]
     results = {}
 
     for lr in learning_rates:
         print(f"Testing learning rate: {lr}")
-        lr_results = train(model, device, loaders, criterion, optimizer, epochs)
+        model = get_model(architecture).to(device)
+        optimizer = optim.Adam(model.parameters(), lr=lr)
+        lr_results = train(model, loaders, criterion, optimizer, device, epochs)
         results[lr] = lr_results
 
-    epochs = range(1, epochs + 1)
+    epochs_range = range(1, epochs + 1)
     for lr in learning_rates:
-        plt.plot(epochs, results[lr]['epoch_accuracy'], label=f'LR={lr}')
+        plt.plot(epochs_range, results[lr]['epoch_accuracy'], label=f'LR={lr}')
 
     plt.title("Validation Accuracy vs. Epochs for Different Learning Rates")
     plt.xlabel("Epochs")
@@ -50,29 +54,26 @@ def learning_rate_test(model, device, loaders, criterion, optimizer, epochs):
     plt.show()
 
 
-def configure_test(architecture):
+def configure_test():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     print(f"Using {torch.cuda.device_count()} GPUs")
-    # Load data and model
+    # Load data and prepare common resources
     loaders = load_emnist_data(
         train_config["emnist_type"],
         train_config["train_batch_size"],
         train_config["subsample_size"],
         train_config["cpu_workers"]
     )
-    model = get_model(architecture).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
-    return criterion, device, loaders, model, optimizer
+    return device, loaders, criterion
 
 
 def main(architecture):
-    test_epoch = 500
-
-    criterion, device, loaders, model, optimizer = configure_test(architecture)
-    epoch_test(model, device, loaders, criterion, optimizer, test_epoch)
-    learning_rate_test(model, device, loaders, criterion, optimizer, test_epoch)
+    test_epochs = 50
+    device, loaders, criterion = configure_test()
+    epoch_test(architecture, device, loaders, criterion, test_epochs)
+    learning_rate_test(architecture, device, loaders, criterion, test_epochs)
 
 
 if __name__ == "__main__":
