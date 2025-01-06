@@ -20,6 +20,7 @@ class EmnistCNN(nn.Module):
         self.fcon1 = nn.Sequential(nn.Linear(49 * fmaps2, dense), nn.LeakyReLU())
         self.fcon2 = nn.Linear(dense, 10)
         self.dropout = nn.Dropout(p=dropout)
+        self.init_weights()
 
     def forward(self, x):
         x = self.conv1(x)
@@ -29,6 +30,9 @@ class EmnistCNN(nn.Module):
         x = self.fcon2(x)
         return x
 
+    def init_weights(self):
+        if isinstance(self, nn.Conv2d):
+            nn.init.kaiming_normal_(self.weight, nonlinearity='relu')
 
 def get_model(architecture, model_config):
     if architecture == "EmnistCNN":

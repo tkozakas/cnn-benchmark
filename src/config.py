@@ -1,20 +1,21 @@
 train_config = {
-    'epochs': 60,  # Number of epochs
-    'show_interval': 50,  # Interval for showing progress
-    'valid_interval': 20,  # Interval for validation
-    'save_interval': 20,  # Interval for saving model
-    'train_batch_size': 32,  # Batch size for training
-    'eval_batch_size': 128,  # Batch size for evaluation
-    'learning_rate': 0.0005,  # Learning rate
-    'cpu_workers': 6  # Number of CPU workers
+    'epochs': 50,
+    'valid_interval': 5,  # (IN EPOCHS)
+    'save_interval': 10,  # (IN EPOCHS)
+    'show_interval': 50,  # (IN BATCHES)
+    'train_batch_size': 32,  # (INCREASE IF GPU MEMORY ALLOWS)
+    'eval_batch_size': 128,  # (INCREASE IF GPU MEMORY ALLOWS)
+    'learning_rate': 0.0001,  # (ADJUST IF NEEDED)
+    'cpu_workers': 6
 }
+
 
 model_config = {
     "EmnistCNN": {
-        "fmaps1": 32,  # Number of feature maps in the first convolutional layer
-        "fmaps2": 64,  # Number of feature maps in the second convolutional layer
-        "dense": 128,  # Number of units in the dense (fully connected) layer
-        "dropout": 0.5  # Dropout rate
+        "fmaps1": 64,
+        "fmaps2": 128,
+        "dense": 256,
+        "dropout": 0.3
     }
 }
 

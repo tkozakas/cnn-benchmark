@@ -24,7 +24,7 @@ def evaluate_simple_cnn(model, dataloader, criterion, device='cpu'):
             images, labels = images.to(device), labels.to(device)
 
             # Forward pass
-            outputs = model(images)
+            outputs = model.forward(images)
             loss = criterion(outputs, labels)
 
             # Update total loss

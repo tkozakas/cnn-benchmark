@@ -17,26 +17,12 @@ from src.evaluate import evaluate_simple_cnn
 from src.model import get_model, save_model
 
 
-def train_batch(model, data, optimizer, criterion, device):
-    """
-    Train the model on a single batch of data.
-    """
-    model.train()
-    images, labels = [d.to(device) for d in data]
-    outputs = model(images)
-    loss = criterion(outputs, labels)
-
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-
-    return loss.item()
-
-
-def train_model(model, train_loader, test_loader, validation_loader, criterion, optimizer, device,
-                show_interval, valid_interval, save_interval, epochs=10):
+def train_model(
+        model, train_loader, test_loader, validation_loader, criterion, optimizer, device,
+        show_interval, valid_interval, save_interval, epochs=10, scheduler=None):
     """
     Train the model on the training set.
+
     Parameters:
     - model: The model to train.
     - train_loader: DataLoader for the training set.
@@ -49,9 +35,6 @@ def train_model(model, train_loader, test_loader, validation_loader, criterion, 
     - save_interval: Interval for saving the model.
     - epochs: The number of epochs to train the model.
     """
-    model.to(device)
-    model.train()
-
     results = {
         "epoch_loss": [],
         "epoch_accuracy": []
@@ -61,6 +44,8 @@ def train_model(model, train_loader, test_loader, validation_loader, criterion, 
         running_loss = 0.0
         for i, data in enumerate(train_loader, 0):
             loss = train_batch(model, data, optimizer, criterion, device)
+            if scheduler:
+                scheduler.step()
             running_loss += loss
 
             if i % show_interval == show_interval - 1:
@@ -69,8 +54,8 @@ def train_model(model, train_loader, test_loader, validation_loader, criterion, 
                       f"Loss: {running_loss / show_interval:.4f}")
                 running_loss = 0.0
 
-        if (epoch + 1) % valid_interval == 0:
-            print(f"Evaluating at epoch {epoch + 1}")
+        if validation_loader and (epoch + 1) % valid_interval == 0:
+            print(f"Evaluating at epoch {epoch + 1}...")
             eval_results = evaluate_simple_cnn(model, validation_loader, criterion, device=device)
             results["epoch_loss"].append(eval_results["loss"])
             results["epoch_accuracy"].append(eval_results["accuracy"])
@@ -86,6 +71,21 @@ def train_model(model, train_loader, test_loader, validation_loader, criterion, 
     print(f"Test Loss: {eval_results['loss']:.4f}, "
           f"Accuracy: {eval_results['accuracy']:.4f}")
     return results
+
+
+def train_batch(model, data, optimizer, criterion, device):
+    model.to(device)
+    model.train()
+
+    images, labels = [d.to(device) for d in data]
+    outputs = model.forward(images)
+    loss = criterion(outputs, labels)
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+    return loss.item()
 
 def get_emnist_loaders(train_batch_size, eval_batch_size, cpu_workers, val_split=0.2):
     print("Loading EMNIST dataset from provided paths...")
@@ -160,6 +160,7 @@ def main(architecture):
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
     criterion.to(device)
 
     assert save_interval % valid_interval == 0
@@ -176,7 +177,8 @@ def main(architecture):
         show_interval,
         valid_interval,
         save_interval,
-        epochs=epochs
+        epochs=epochs,
+        scheduler=scheduler
     )
 
 
