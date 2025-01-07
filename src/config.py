@@ -1,16 +1,17 @@
 train_config = {
     'emnist_type': 'digits', # ! Need to change number of classes in model_config if changing this
-    'subsample_size': 20000,
-    'epochs': 150,
-    'valid_interval': 2,
-    'save_interval': 150,
+    'subsample_size': None,
+    'epochs': 100,
+    'valid_interval': 10,
+    'save_interval': 20,
     'show_interval': 10,
     'train_batch_size': 64,
     'eval_batch_size': 128,
-    'learning_rate': 0.001,
+    'learning_rate': 0.0005,
     'cpu_workers': 6
 }
 
+# "num_classes": # letters = 26, digits = 10, balanced = 47
 model_config = {
     "EmnistCNN": {
         "fmaps1": 16,
@@ -19,6 +20,12 @@ model_config = {
         "dense": 256,
         "dropout": 0.3,
         "input_size": 28,
-        "num_classes": 10 # letters = 26, digits = 10, balanced = 47
+        "num_classes": 10
+    },
+    "Resnet18": {
+        "num_classes": 10
+    },
+    "Resnet18-pretrained": {
+        "num_classes": 10
     }
 }

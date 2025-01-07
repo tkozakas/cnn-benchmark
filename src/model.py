@@ -13,7 +13,7 @@ class EmnistCNN(nn.Module):
 
         # First Convolutional Block
         self.conv1 = nn.Sequential(
-            nn.Conv2d(1, fmaps1, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(3, fmaps1, kernel_size=5, stride=1, padding=2),
             nn.BatchNorm2d(fmaps1),
             activation(),
             nn.MaxPool2d(kernel_size=2, stride=2),
@@ -74,6 +74,12 @@ class EmnistCNN(nn.Module):
 def get_model(architecture):
     if architecture == "EmnistCNN":
         return EmnistCNN(**model_config["EmnistCNN"])
+    elif architecture == "Resnet18":
+        return torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=False,
+                              num_classes=model_config["Resnet18"]["num_classes"])
+    elif architecture == "Resnet18-pretrained":
+        return torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True,
+                              num_classes=model_config["Resnet18-pretrained"]["num_classes"])
     else:
         raise ValueError(f"Unknown architecture: {architecture}")
 

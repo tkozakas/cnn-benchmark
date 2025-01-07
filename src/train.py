@@ -17,6 +17,7 @@ from src.config import train_config
 from src.model import save_model, get_model
 
 transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=3),
     transforms.Resize((28, 28)),
     transforms.RandomRotation(15),
     transforms.ToTensor(),

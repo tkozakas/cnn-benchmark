@@ -28,14 +28,14 @@ from src.config import train_config
 from src.model import get_model
 
 transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=3),
     transforms.Resize((28, 28)),
-    transforms.RandomRotation(15),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
 
-def load_model(model_path, device):
-    model = get_model("EmnistCNN").to(device)
+def load_model(architecture, model_path, device):
+    model = get_model(architecture).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     return model
@@ -103,7 +103,7 @@ def load_dataset(emnist_type):
     return datasets.EMNIST(root="../data", split=emnist_type, train=True, download=True, transform=transform)
 
 
-def predict_from_dataset(model, dataset, device, num_images=1, cols=1):
+def predict_from_dataset(model, dataset, device, num_images=20, cols=5):
     rows = math.ceil(num_images / cols)
     plt.figure(figsize=(cols * 3, rows * 3))
 
@@ -115,8 +115,11 @@ def predict_from_dataset(model, dataset, device, num_images=1, cols=1):
             predicted_class, confidence = predict_character(model, image_tensor)
 
         image_corrected = F.rotate(image, angle=-90)
+        if image_corrected.shape[0] == 3:
+            image_corrected = image_corrected.permute(1, 2, 0)
+
         plt.subplot(rows, cols, i + 1)
-        plt.imshow(image_corrected.squeeze(0), cmap="gray")
+        plt.imshow(image_corrected.squeeze(), cmap="gray")
         plt.title(
             f"Predicted: {predicted_class}, Conf: {confidence:.2f}\nActual: {label}"
         )
@@ -126,7 +129,7 @@ def predict_from_dataset(model, dataset, device, num_images=1, cols=1):
     plt.show()
 
 
-def display_predictions(predictions, num_segments=3, cols=1):
+def display_predictions(predictions, num_segments=20, cols=5):
     segment_predictions = predictions[:num_segments]
     num_images = len(segment_predictions)
     rows = math.ceil(num_images / cols)
@@ -155,7 +158,8 @@ if __name__ == "__main__":
     image_path = args["<image_path>"]
     device = args["--device"] or ("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = load_model(model_path, device)
+    architecture = "EmnistCNN"
+    model = load_model(architecture, model_path, device)
 
     dataset = load_dataset(train_config["emnist_type"])
     predict_from_dataset(model, dataset, device)
