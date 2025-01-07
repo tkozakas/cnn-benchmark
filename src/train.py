@@ -17,11 +17,8 @@ from src.config import train_config
 from src.model import save_model, get_model
 
 transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=1),
     transforms.Resize((28, 28)),
     transforms.RandomRotation(15),
-    transforms.RandomAffine(degrees=10, translate=(0.1, 0.1), scale=(0.9, 1.1)),
-    transforms.ColorJitter(brightness=0.2, contrast=0.2),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])

@@ -28,8 +28,8 @@ from src.config import train_config
 from src.model import get_model
 
 transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=1),
     transforms.Resize((28, 28)),
+    transforms.RandomRotation(15),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
@@ -103,7 +103,7 @@ def load_dataset(emnist_type):
     return datasets.EMNIST(root="../data", split=emnist_type, train=True, download=True, transform=transform)
 
 
-def predict_from_dataset(model, dataset, device, num_images=20, cols=5):
+def predict_from_dataset(model, dataset, device, num_images=1, cols=1):
     rows = math.ceil(num_images / cols)
     plt.figure(figsize=(cols * 3, rows * 3))
 
@@ -126,12 +126,13 @@ def predict_from_dataset(model, dataset, device, num_images=20, cols=5):
     plt.show()
 
 
-def display_predictions(predictions, cols=5):
-    num_images = len(predictions)
+def display_predictions(predictions, num_segments=3, cols=1):
+    segment_predictions = predictions[:num_segments]
+    num_images = len(segment_predictions)
     rows = math.ceil(num_images / cols)
     plt.figure(figsize=(cols * 3, rows * 3))
 
-    for i, pred in enumerate(predictions):
+    for i, pred in enumerate(segment_predictions):
         char_img = pred["char_img"]
         pytorch_pred = pred["pytorch"]
         tesseract_pred = pred["tesseract"]
@@ -146,6 +147,7 @@ def display_predictions(predictions, cols=5):
 
     plt.tight_layout()
     plt.show()
+
 
 if __name__ == "__main__":
     args = docopt(__doc__)
