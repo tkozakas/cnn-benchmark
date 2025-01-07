@@ -16,8 +16,17 @@ from torchvision import datasets, transforms
 from src.config import train_config
 from src.model import save_model, get_model
 
+transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=1),
+    transforms.Resize((28, 28)),
+    transforms.RandomRotation(15),
+    transforms.RandomAffine(degrees=10, translate=(0.1, 0.1), scale=(0.9, 1.1)),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
 
-def train(model, loaders, criterion, optimizer, device, epochs):
+def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None):
     train_loader = loaders["train"]
     val_loader = loaders["validation"]
     test_loader = loaders["test"]
@@ -59,6 +68,9 @@ def train(model, loaders, criterion, optimizer, device, epochs):
         results["val_loss"].append(val_loss)
         results["val_accuracy"].append(val_acc)
 
+        if scheduler:
+            scheduler.step()
+
         # Print epoch results
         print(f"Epoch [{epoch}/{epochs}] | "
               f"Train Loss: {epoch_loss:.4f} | Train Accuracy: {epoch_acc:.4f} | "
@@ -74,7 +86,7 @@ def train(model, loaders, criterion, optimizer, device, epochs):
     return results
 
 def evaluate(model, loader, criterion, device):
-    model.eval()  # Set the model to evaluation mode
+    model.eval()
     running_loss = 0.0
     correct = 0
     total = 0
@@ -99,8 +111,6 @@ def plot_results(epochs, train_accuracies, train_losses, val_accuracies, val_los
     plt.figure(figsize=(12, 6))
     plt.plot(epochs, train_accuracies, label="Train Accuracy")
     plt.plot(epochs, val_accuracies, label="Validation Accuracy", linestyle="--")
-    plt.plot(epochs, train_losses, label="Train Loss")
-    plt.plot(epochs, val_losses, label="Validation Loss", linestyle="--")
     plt.title("Training and Validation Metrics")
     plt.xlabel("Epochs")
     plt.ylabel("Metric")
@@ -111,10 +121,6 @@ def plot_results(epochs, train_accuracies, train_losses, val_accuracies, val_los
 
 def load_emnist_data(emnist_type, batch_size, subsample_size, cpu_workers, val_split=0.2):
     print("Loading EMNIST dataset...")
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,))
-    ])
     full_train_dataset = datasets.EMNIST(root="../data", split=emnist_type, train=True, download=True, transform=transform)
 
     if subsample_size:
@@ -137,8 +143,8 @@ def load_emnist_data(emnist_type, batch_size, subsample_size, cpu_workers, val_s
     }
 
 def main(architecture):
-    criterion, device, loaders, model, optimizer = configure_training(architecture)
-    results = train(model, loaders, criterion, optimizer, device, train_config["epochs"])
+    criterion, device, loaders, model, optimizer, scheduler = configure_training(architecture)
+    results = train(model, loaders, criterion, optimizer, device, train_config["epochs"], scheduler)
     plot_results(
         range(1, train_config["epochs"] + 1),
         results["epoch_accuracy"],
@@ -161,8 +167,10 @@ def configure_training(architecture):
     )
     model = get_model(architecture).to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
-    return criterion, device, loaders, model, optimizer
+    optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"], weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+
+    return criterion, device, loaders, model, optimizer, scheduler
 
 
 if __name__ == "__main__":

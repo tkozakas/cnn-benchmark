@@ -11,156 +11,131 @@ Options:
   <image_path>       Path to the input image.
   --device=<device>  Device to use for prediction (default: "cuda" if available, else "cpu").
 """
+import math
+import random
 
 import cv2
-import torch
-from docopt import docopt
-from torchvision import transforms
-from PIL import Image
 import numpy as np
-import matplotlib.pyplot as plt
-from skimage.filters import threshold_otsu
-from skimage.measure import label, regionprops
-from skimage.color import label2rgb
+import torch
+import torchvision.transforms.functional as F
+from PIL import Image
+from docopt import docopt
+from matplotlib import pyplot as plt
+from torchvision import transforms, datasets
+import pytesseract
+from src.config import train_config
 from src.model import get_model
 
+transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=1),
+    transforms.Resize((28, 28)),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
 
 def load_model(model_path, device):
-    """
-    Load the trained PyTorch model.
-    """
     model = get_model("EmnistCNN").to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     return model
 
-
 def preprocess_image(image, device):
-    """
-    Preprocess a single image for the model.
-    """
-    transform = transforms.Compose([
-        transforms.Resize((28, 28)),  # Ensure size is 28x28
-        transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,))
-    ])
+    if isinstance(image, torch.Tensor):
+        return image.unsqueeze(0).to(device)
     return transform(image).unsqueeze(0).to(device)
 
 
-def segment_characters(image_path, debug=False):
-    """
-    Segment characters from the input image using skimage methods.
+def preprocess_segmented_characters(image_path, padding=5):
+    image = Image.open(image_path).convert("L")
+    image_np = np.array(image)
 
-    Args:
-        image_path (str): Path to the input image.
-        debug (bool): Whether to save debugging visualizations.
+    _, binary = cv2.threshold(image_np, 128, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    Returns:
-        segments (list): List of segmented character images.
-        bounding_boxes (list): List of bounding box coordinates (minr, minc, maxr, maxc).
-    """
-    import os
+    char_images = []
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        if h > 10:  # Filter out noise (e.g., very small segments)
+            x_start = max(0, x - padding)
+            y_start = max(0, y - padding)
+            x_end = min(binary.shape[1], x + w + padding)
+            y_end = min(binary.shape[0], y + h + padding)
 
-    to_gray = transforms.Compose([transforms.Grayscale(num_output_channels=1), transforms.ToTensor()])
-    image = Image.open(image_path).convert("RGB")
-    gray = to_gray(image).squeeze(0).numpy()
-    binary = gray > threshold_otsu(gray)
+            char_crop = binary[y_start:y_end, x_start:x_end]
+            char_resized = cv2.resize(char_crop, (28, 28), interpolation=cv2.INTER_AREA)
+            char_images.append(char_resized)
 
-    # Ensure binary is converted to an integer array for labeling
-    binary = np.asarray(binary, dtype=np.uint8)
-
-    # Create labeled regions
-    labeled = label(binary)
-
-    # Validate labeled output
-    if not isinstance(labeled, np.ndarray):
-        raise ValueError("Unexpected output from 'label': expected a numpy array.")
-
-    props = regionprops(labeled)
-    segments = []
-
-    if debug:
-        os.makedirs("../predictions", exist_ok=True)
-        labeled_rgb = label2rgb(labeled, image=gray, bg_label=0)
-        plt.figure(figsize=(10, 6))
-        plt.imshow(labeled_rgb, cmap="gray")
-        for region in props:
-            minr, minc, maxr, maxc = region.bbox
-            plt.gca().add_patch(
-                plt.Rectangle((minc, minr), maxc - minc, maxr - minr, edgecolor="red", fill=False, linewidth=2)
-            )
-        plt.title(f"Bounding Boxes for {os.path.basename(image_path)}")
-        plt.axis("off")
-        plt.savefig(os.path.join("../predictions", f"bounding_boxes_{os.path.basename(image_path)}.png"))
-        plt.close()
-
-    bounding_boxes = []
-    for i, region in enumerate(props):
-        minr, minc, maxr, maxc = region.bbox
-        crop = gray[minr:maxr, minc:maxc]
-        crop_img = Image.fromarray((crop * 255).astype("uint8")).resize((28, 28), Image.Resampling.LANCZOS)
-        if debug:
-            crop_img.save(os.path.join("../predictions", f"segment_{i}_{os.path.basename(image_path)}"))
-        segments.append(crop_img)
-        bounding_boxes.append((minr, minc, maxr, maxc))
-
-    return segments, bounding_boxes
+    return char_images
 
 
-def predict(model, image_tensor):
-    """
-    Predict the class of a single segmented character image.
-    """
+def predict_character(model, image, device):
+    image_tensor = preprocess_image(image, device)
     with torch.no_grad():
         outputs = model(image_tensor)
-    return outputs.argmax(dim=1).item()
+        predicted_class = torch.argmax(outputs, dim=1).item()
+    return predicted_class
 
+
+def load_dataset(emnist_type):
+    return datasets.EMNIST(root="../data", split=emnist_type, train=True, download=True, transform=transform)
+
+
+def display_random_predicted_images_from_dataset(model, dataset, device, num_images=20, cols=5):
+    rows = math.ceil(num_images / cols)
+    plt.figure(figsize=(cols * 3, rows * 3))
+    for i in range(num_images):
+        image, label = dataset[random.randint(0, len(dataset) - 1)]
+        predicted_class = predict_character(model, image, device)
+
+        image_corrected = F.rotate(image, angle=-90)
+
+        plt.subplot(rows, cols, i + 1)
+        plt.imshow(image_corrected.squeeze(0), cmap='gray')
+        plt.title(f"Predicted: {predicted_class}\nActual: {label}")
+        plt.axis('off')
+    plt.tight_layout()
+    plt.show()
+
+
+def display_segmented_characters_with_predictions(model, char_images, device, cols=5):
+    num_images = len(char_images)
+    rows = math.ceil(num_images / cols)
+    plt.figure(figsize=(cols * 3, rows * 3))
+
+    for i, char_img in enumerate(char_images):
+        char_pil = Image.fromarray(char_img)
+        char_tensor = transform(char_pil).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            output = model(char_tensor)
+            probabilities = torch.nn.functional.softmax(output, dim=1)
+            predicted_class = torch.argmax(output, dim=1).item()
+
+        tesseract_prediction = pytesseract.image_to_string(char_pil, config="--psm 10 -c tessedit_char_whitelist=0123456789")
+        tesseract_prediction = tesseract_prediction.strip()
+
+        plt.subplot(rows, cols, i + 1)
+        plt.imshow(char_img, cmap="gray")
+        plt.title(f"PyTorch: {predicted_class}, Prob: {probabilities[0][predicted_class]:.4f}\nTesseract: {tesseract_prediction}")
+        plt.axis("off")
+
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
-    # Parse command-line arguments
     args = docopt(__doc__)
     model_path = args["<model_path>"]
     image_path = args["<image_path>"]
     device = args["--device"] or ("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load the trained model
+    dataset = load_dataset(train_config["emnist_type"])
     model = load_model(model_path, device)
 
-    # Segment characters and get bounding boxes
-    segmented_images, bounding_boxes = segment_characters(image_path)
+    # Shows random images from the dataset with their predicted labels
+    display_random_predicted_images_from_dataset(model, dataset, device)
 
-    # Predict each segmented character
-    predictions = []
-    for char_image in segmented_images:
-        # Preprocess the segmented character
-        image_tensor = preprocess_image(char_image, device)
-        # Predict the class
-        prediction = predict(model, image_tensor)
-        predictions.append(prediction)
-
-    # Print predicted classes
-    print(f"Predicted Classes: {predictions}")
-
-    # Visualize results
-    original_image = cv2.imread(image_path)
-    for (minr, minc, maxr, maxc), pred in zip(bounding_boxes, predictions):
-        # Draw bounding boxes and predictions
-        cv2.rectangle(original_image, (minc, minr), (maxc, maxr), (0, 255, 0), 2)
-        cv2.putText(original_image, str(pred), (minc, minr - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-
-    # Show the original image with predictions
-    plt.figure(figsize=(12, 6))
-    plt.imshow(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
-    plt.title("Predictions with Bounding Boxes")
-    plt.axis("off")
-    plt.show()
+    # Preprocess the input image
+    char_images = preprocess_segmented_characters(image_path)
 
     # Show segmented characters with predictions
-    plt.figure(figsize=(len(segmented_images) * 2, 4))
-    for i, (char_image, pred) in enumerate(zip(segmented_images, predictions)):
-        plt.subplot(1, len(segmented_images), i + 1)
-        plt.imshow(char_image, cmap="gray")
-        plt.title(f"Pred: {pred}")
-        plt.axis("off")
-    plt.tight_layout()
-    plt.show()
+    display_segmented_characters_with_predictions(model, char_images, device)
