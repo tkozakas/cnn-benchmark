@@ -27,6 +27,7 @@ def epoch_test(architecture, device, loaders, criterion, epochs):
     print_results_table(results)
     plot_learning_rate(lrs=results["learning_rate"], epochs=len(results["learning_rate"]))
 
+
 def learning_rate_test(architecture, device, loaders, criterion, epochs):
     learning_rates = [0.0001, 0.001, 0.01, 0.1]
     results = {}
@@ -38,10 +39,11 @@ def learning_rate_test(architecture, device, loaders, criterion, epochs):
         lr_results = train(model, loaders, criterion, optimizer, device, epochs)
         results[lr] = lr_results
 
-    epochs_range = range(1, epochs + 1)
     plt.figure(figsize=(10, 6))
     for lr in learning_rates:
-        plt.plot(epochs_range, results[lr]['epoch_accuracy'], label=f'LR={lr}')
+        epoch_accuracy = results[lr]['epoch_accuracy']
+        epochs_range = range(1, len(epoch_accuracy) + 1)
+        plt.plot(epochs_range, epoch_accuracy, label=f'LR={lr}')
 
     plt.title("Validation Accuracy vs. Epochs for Different Learning Rates")
     plt.xlabel("Epochs")
@@ -69,10 +71,11 @@ def batch_size_test(architecture, device, criterion, epochs):
         batch_results = train(model, loaders, criterion, optimizer, device, epochs)
         results[batch_size] = batch_results
 
-    epochs_range = range(1, epochs + 1)
     plt.figure(figsize=(10, 6))
     for batch_size in batch_sizes:
-        plt.plot(epochs_range, results[batch_size]['epoch_accuracy'], label=f'Batch={batch_size}')
+        epoch_accuracy = results[batch_size]['epoch_accuracy']
+        epochs_range = range(1, len(epoch_accuracy) + 1)
+        plt.plot(epochs_range, epoch_accuracy, label=f'Batch={batch_size}')
 
     plt.title("Validation Accuracy vs. Epochs for Different Batch Sizes")
     plt.xlabel("Epochs")
