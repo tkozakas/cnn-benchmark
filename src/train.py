@@ -15,7 +15,7 @@ from torchvision import datasets, transforms
 
 from src.config import train_config
 from src.model import save_model, get_model
-from src.visualise import plot_results, plot_confusion_matrix, plot_learning_rate
+from src.visualise import plot_results, plot_confusion_matrix
 
 transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=3),
@@ -28,7 +28,7 @@ transform = transforms.Compose([
 NUM_CLASSES = 47
 
 
-def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, early_stopping_patience=5):
+def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, early_stopping_patience=10):
     train_loader = loaders["train"]
     val_loader = loaders["validation"]
     test_loader = loaders["test"]
@@ -39,7 +39,8 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
         "epoch_precision": [],
         "val_loss": [],
         "val_accuracy": [],
-        "val_precision": []
+        "val_precision": [],
+        "learning_rate": []
     }
 
     train_precision = MulticlassPrecision(num_classes=NUM_CLASSES).to(device)
@@ -90,14 +91,17 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
         results["val_accuracy"].append(val_acc)
         results["val_precision"].append(val_precision)
 
+        current_lr = optimizer.param_groups[0]['lr']
+        results["learning_rate"].append(current_lr)
+
         # Early Stopping Check
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             patience_counter = 0
-            save_model(model, f"{model.__class__.__name__}_best.pth")
         else:
             patience_counter += 1
             if patience_counter >= early_stopping_patience:
+                save_model(model, f"{model.__class__.__name__}_best.pth")
                 print(f"Early stopping triggered after epoch {epoch}.")
                 break
 
@@ -183,7 +187,6 @@ def main(architecture):
         device=device,
         classes=list(range(NUM_CLASSES))
     )
-    plot_learning_rate(optimizer, train_config["epochs"])
 
 def configure_training(architecture):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

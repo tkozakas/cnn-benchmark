@@ -71,15 +71,16 @@ def plot_confusion_matrix(model, loader, device, classes):
     plt.show()
 
 
-def plot_learning_rate(optimizer, epochs, title="Learning Rate Schedule"):
-    lrs = [group['lr'] for group in optimizer.param_groups]
+def plot_learning_rate(lrs, epochs, title="Learning Rate Schedule"):
     plt.figure(figsize=(10, 6))
-    plt.plot(range(1, epochs + 1), lrs, marker='o')
+    x_values = range(1, len(lrs) + 1)
+    plt.plot(x_values, lrs, marker='o', linestyle='-')
     plt.title(title)
     plt.xlabel("Epoch")
     plt.ylabel("Learning Rate")
     plt.grid(True)
     plt.show()
+
 
 
 def plot_results(results):

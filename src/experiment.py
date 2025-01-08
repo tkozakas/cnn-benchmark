@@ -1,3 +1,11 @@
+"""
+Usage:
+    experiment.py [--architecture=ARCH]
+
+Options:
+    --architecture=ARCH   Specify the architecture to use [default: EmnistCNN].
+"""
+
 import time
 
 import matplotlib.pyplot as plt
@@ -8,7 +16,7 @@ from torch import optim, nn
 from src.config import train_config
 from src.model import get_model
 from src.train import train, load_emnist_data
-from src.visualise import plot_results, print_results_table
+from src.visualise import plot_results, print_results_table, plot_learning_rate
 
 
 def epoch_test(architecture, device, loaders, criterion, epochs):
@@ -17,6 +25,7 @@ def epoch_test(architecture, device, loaders, criterion, epochs):
     results = train(model, loaders, criterion, optimizer, device, epochs)
     plot_results(results=results)
     print_results_table(results)
+    plot_learning_rate(lrs=results["learning_rate"], epochs=len(results["learning_rate"]))
 
 def learning_rate_test(architecture, device, loaders, criterion, epochs):
     learning_rates = [0.0001, 0.001, 0.01, 0.1]
@@ -40,6 +49,7 @@ def learning_rate_test(architecture, device, loaders, criterion, epochs):
     plt.legend()
     plt.grid(True)
     plt.show()
+
 
 def batch_size_test(architecture, device, criterion, epochs):
     batch_sizes = [16, 32, 64, 128, 256]
@@ -70,6 +80,7 @@ def batch_size_test(architecture, device, criterion, epochs):
     plt.legend()
     plt.grid(True)
     plt.show()
+
 
 def training_speed_test(architecture, device, criterion, epochs):
     batch_sizes = [16, 32, 64, 128, 256]
@@ -103,11 +114,16 @@ def training_speed_test(architecture, device, criterion, epochs):
     plt.grid(axis='y')
     plt.show()
 
+
 def configure_test():
+    """
+    Configures device, data loaders, and loss criterion.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     print(f"Using {torch.cuda.device_count()} GPU(s)")
 
+    # Load data and prepare common resources
     loaders = load_emnist_data(
         train_config["emnist_type"],
         train_config["train_batch_size"],
@@ -116,6 +132,7 @@ def configure_test():
     )
     criterion = nn.CrossEntropyLoss()
     return device, loaders, criterion
+
 
 def main(architecture):
     test_epochs = 50
@@ -131,6 +148,7 @@ def main(architecture):
 
     print("\n--- Testing training speed ---")
     training_speed_test(architecture, device, criterion, test_epochs)
+
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
