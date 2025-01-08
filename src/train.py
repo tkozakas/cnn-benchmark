@@ -15,7 +15,7 @@ from torchvision import datasets, transforms
 
 from src.config import train_config
 from src.model import save_model, get_model
-from src.visualise import plot_results
+from src.visualise import plot_results, plot_confusion_matrix, plot_learning_rate
 
 transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=3),
@@ -27,7 +27,8 @@ transform = transforms.Compose([
 
 NUM_CLASSES = 47
 
-def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None):
+
+def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, early_stopping_patience=5):
     train_loader = loaders["train"]
     val_loader = loaders["validation"]
     test_loader = loaders["test"]
@@ -35,14 +36,16 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None):
     results = {
         "epoch_loss": [],
         "epoch_accuracy": [],
-        "epoch_precision": [],  # Added
+        "epoch_precision": [],
         "val_loss": [],
         "val_accuracy": [],
-        "val_precision": []  # Added
+        "val_precision": []
     }
 
-    # Initialize Precision metric for training
     train_precision = MulticlassPrecision(num_classes=NUM_CLASSES).to(device)
+
+    best_val_loss = float('inf')
+    patience_counter = 0
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -50,7 +53,6 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None):
         correct = 0
         total = 0
 
-        # Reset Precision metric at the start of each epoch
         train_precision.reset()
 
         for images, labels in train_loader:
@@ -80,43 +82,49 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None):
 
         results["epoch_loss"].append(epoch_loss)
         results["epoch_accuracy"].append(epoch_acc)
-        results["epoch_precision"].append(epoch_precision)  # Added
+        results["epoch_precision"].append(epoch_precision)
 
         # Validation phase
         val_loss, val_acc, val_precision = evaluate(model, val_loader, criterion, device)
         results["val_loss"].append(val_loss)
         results["val_accuracy"].append(val_acc)
-        results["val_precision"].append(val_precision)  # Added
+        results["val_precision"].append(val_precision)
+
+        # Early Stopping Check
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience_counter = 0
+            save_model(model, f"{model.__class__.__name__}_best.pth")
+        else:
+            patience_counter += 1
+            if patience_counter >= early_stopping_patience:
+                print(f"Early stopping triggered after epoch {epoch}.")
+                break
 
         if scheduler:
             scheduler.step()
 
-        # Print epoch results
         print(f"Epoch [{epoch}/{epochs}] | "
               f"Train Loss: {epoch_loss:.4f} | Train Accuracy: {epoch_acc:.4f} | "
               f"Train Precision: {epoch_precision:.4f} | "
               f"Val Loss: {val_loss:.4f} | Val Accuracy: {val_acc:.4f} | "
               f"Val Precision: {val_precision:.4f}")
 
-        # Save model at intervals
         if epoch % train_config["save_interval"] == 0:
-            save_model(model, f"{model.__class__.__name__}_epoch_{epoch}.pt")
+            save_model(model, f"{model.__class__.__name__}_epoch_{epoch}.pth")
 
-    # Evaluate on the test set (optional: you can add test_precision similarly)
-    test_loss, test_acc, test_precision = evaluate(model, test_loader, criterion, device)
-    print(f"Test Loss: {test_loss:.4f} | Test Accuracy: {test_acc:.4f} | Test Precision: {test_precision:.4f}")
+    test_loss, test_acc, test_presicion = evaluate(model, test_loader, criterion, device)
+    print(f"Test Loss: {test_loss:.4f} | Test Accuracy: {test_acc:.4f} | Test Precision: {test_presicion:.4f}")
 
     return results
 
 
 def evaluate(model, loader, criterion, device):
-    """Evaluate model on a given loader. Returns loss, accuracy, and precision."""
     model.eval()
     running_loss = 0.0
     correct = 0
     total = 0
 
-    # Initialize Precision metric for evaluation
     precision_metric = MulticlassPrecision(num_classes=NUM_CLASSES).to(device)
     precision_metric.reset()
 
@@ -132,7 +140,6 @@ def evaluate(model, loader, criterion, device):
             correct += (predictions == labels).sum().item()
             total += images.size(0)
 
-            # Update Precision metric with current batch
             precision_metric.update(predictions, labels)
 
     loss = running_loss / total
@@ -169,9 +176,14 @@ def main(architecture):
     criterion, device, loaders, model, optimizer, scheduler = configure_training(architecture)
     results = train(model, loaders, criterion, optimizer, device, train_config["epochs"], scheduler)
 
-    plot_results(
-        results=results
+    plot_results(results=results)
+    plot_confusion_matrix(
+        model=model,
+        loader=loaders["test"],
+        device=device,
+        classes=list(range(NUM_CLASSES))
     )
+    plot_learning_rate(optimizer, train_config["epochs"])
 
 def configure_training(architecture):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

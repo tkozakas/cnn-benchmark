@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
+import torch
+from sklearn.metrics import confusion_matrix
 
 
 def show_performance_curve(
@@ -12,7 +15,6 @@ def show_performance_curve(
     train_values = results[train_key]
     val_values = results[val_key]
 
-    # Find intersection index (if any) using np.isclose
     intersection_indices = np.argwhere(
         np.isclose(train_values, val_values, atol=intersection_tol)
     ).flatten()
@@ -47,6 +49,39 @@ def show_performance_curve(
     plt.show()
 
 
+def plot_confusion_matrix(model, loader, device, classes):
+    all_preds = []
+    all_labels = []
+
+    model.eval()
+    with torch.no_grad():
+        for images, labels in loader:
+            images = images.to(device)
+            outputs = model(images)
+            preds = outputs.argmax(dim=1).cpu().numpy()
+            all_preds.extend(preds)
+            all_labels.extend(labels.numpy())
+
+    cm = confusion_matrix(all_labels, all_preds)
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=classes, yticklabels=classes)
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.title('Confusion Matrix')
+    plt.show()
+
+
+def plot_learning_rate(optimizer, epochs, title="Learning Rate Schedule"):
+    lrs = [group['lr'] for group in optimizer.param_groups]
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(1, epochs + 1), lrs, marker='o')
+    plt.title(title)
+    plt.xlabel("Epoch")
+    plt.ylabel("Learning Rate")
+    plt.grid(True)
+    plt.show()
+
+
 def plot_results(results):
     show_performance_curve(results, train_key="epoch_accuracy", val_key="val_accuracy", metric_label="Accuracy")
     show_performance_curve(results, train_key="epoch_loss", val_key="val_loss", metric_label="Loss")
@@ -60,20 +95,24 @@ def print_results_table(results):
         "Epoch",
         "Train Loss",
         "Train Acc",
+        "Train Prec",
         "Val Loss",
-        "Val Acc"
+        "Val Acc",
+        "Val Prec"
     ]
 
     row_format = (
         "{:<5}  "  # Epoch
         "{:<10} "  # Train Loss
         "{:<10} "  # Train Acc
+        "{:<10} "  # Train Prec
         "{:<10} "  # Val Loss
-        "{:<10}"  # Val Acc
+        "{:<10} "  # Val Acc
+        "{:<10}"  # Val Prec
     )
 
     print(row_format.format(*headers))
-    print("-" * 45)
+    print("-" * 60)
 
     for epoch_idx in range(num_epochs):
         print(
@@ -81,7 +120,9 @@ def print_results_table(results):
                 epoch_idx + 1,
                 f"{results['epoch_loss'][epoch_idx]:.4f}",
                 f"{results['epoch_accuracy'][epoch_idx]:.4f}",
+                f"{results['epoch_precision'][epoch_idx]:.4f}",
                 f"{results['val_loss'][epoch_idx]:.4f}",
-                f"{results['val_accuracy'][epoch_idx]:.4f}"
+                f"{results['val_accuracy'][epoch_idx]:.4f}",
+                f"{results['val_precision'][epoch_idx]:.4f}"
             )
         )
