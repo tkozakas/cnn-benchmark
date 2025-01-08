@@ -98,7 +98,6 @@ def batch_size_test(architecture, device, criterion, epochs):
         model = get_model(architecture).to(device)
         optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
 
-        # Measure training time
         start_time = time.time()
         batch_results = train(model, loaders, criterion, optimizer, device, epochs)
         elapsed_time = time.time() - start_time
@@ -106,10 +105,8 @@ def batch_size_test(architecture, device, criterion, epochs):
         results[batch_size] = batch_results
         speed_results[batch_size] = elapsed_time
 
-    # Create subplots for validation accuracy and training speed
     fig, axs = plt.subplots(2, 1, figsize=(10, 12))
 
-    # Plot validation accuracy
     for batch_size in batch_sizes:
         epoch_accuracy = results[batch_size]['epoch_accuracy']
         epochs_range = range(1, len(epoch_accuracy) + 1)
@@ -120,32 +117,26 @@ def batch_size_test(architecture, device, criterion, epochs):
     axs[0].legend()
     axs[0].grid(True)
 
-    # Plot training speed
     axs[1].bar(
         speed_results.keys(),
         speed_results.values(),
         color='skyblue',
-        width=10  # Adjust width for better visualization
+        width=10
     )
-    axs[1].set_xticks(batch_sizes)  # Ensure x-axis matches actual batch sizes
+    axs[1].set_xticks(batch_sizes)
     axs[1].set_title("Training Speed for Different Batch Sizes")
     axs[1].set_xlabel("Batch Size")
     axs[1].set_ylabel("Training Time (seconds)")
     axs[1].grid(axis='y')
 
-    # Adjust layout and display the plots
     plt.tight_layout()
     plt.show()
 
 def configure_test():
-    """
-    Configures device, data loaders, and loss criterion.
-    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     print(f"Using {torch.cuda.device_count()} GPU(s)")
 
-    # Load data and prepare common resources
     loaders = load_emnist_data(
         train_config["emnist_type"],
         train_config["train_batch_size"],
