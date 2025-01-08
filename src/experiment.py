@@ -25,8 +25,6 @@ def epoch_test(architecture, device, loaders, criterion, epochs):
     results = train(model, loaders, criterion, optimizer, device, epochs)
     plot_results(results=results)
     print_results_table(results)
-    plot_learning_rate(lrs=results["learning_rate"], epochs=len(results["learning_rate"]))
-
 
 def learning_rate_test(architecture, device, loaders, criterion, epochs):
     learning_rates = [0.0001, 0.001, 0.01, 0.1]

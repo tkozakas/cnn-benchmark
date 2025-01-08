@@ -71,18 +71,6 @@ def plot_confusion_matrix(model, loader, device, classes):
     plt.show()
 
 
-def plot_learning_rate(lrs, epochs, title="Learning Rate Schedule"):
-    plt.figure(figsize=(10, 6))
-    x_values = range(1, len(lrs) + 1)
-    plt.plot(x_values, lrs, marker='o', linestyle='-')
-    plt.title(title)
-    plt.xlabel("Epoch")
-    plt.ylabel("Learning Rate")
-    plt.grid(True)
-    plt.show()
-
-
-
 def plot_results(results):
     show_performance_curve(results, train_key="epoch_accuracy", val_key="val_accuracy", metric_label="Accuracy")
     show_performance_curve(results, train_key="epoch_loss", val_key="val_loss", metric_label="Loss")
