@@ -88,7 +88,7 @@ def process_and_predict_image(model, image, device):
         _, tesseract_ready = cv2.threshold(char_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         tesseract_prediction = pytesseract.image_to_string(
             Image.fromarray(tesseract_ready),
-            config="--psm 10 -c tessedit_char_whitelist=0123456789"
+            config="--psm 10"
         ).strip()
 
         predictions.append({

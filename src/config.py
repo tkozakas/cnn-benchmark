@@ -1,7 +1,7 @@
 train_config = {
-    'emnist_type': 'digits', # ! Need to change number of classes in model_config if changing this
-    'subsample_size': None,
-    'epochs': 100,
+    'emnist_type': 'balanced', # ! Need to change number of classes in model_config if changing this
+    'subsample_size': 10000,
+    'epochs': 10,
     'valid_interval': 10,
     'save_interval': 20,
     'show_interval': 10,
@@ -20,7 +20,7 @@ model_config = {
         "dense": 256,
         "dropout": 0.3,
         "input_size": 28,
-        "num_classes": 10
+        "num_classes": 47
     },
     "Resnet18": {
         "num_classes": 10
