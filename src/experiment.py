@@ -43,41 +43,30 @@ def learning_rate_test(architecture, device, loaders, criterion, epochs):
         results[lr] = lr_results
         time_results[lr] = elapsed_time
 
-    fig, axs = plt.subplots(3, 1, figsize=(10, 18))
-
+    plt.figure(figsize=(10, 6))
     for lr in learning_rates:
         epoch_accuracy = results[lr]['epoch_accuracy']
         epochs_range = range(1, len(epoch_accuracy) + 1)
-        axs[0].plot(epochs_range, epoch_accuracy, label=f'LR={lr}')
-    axs[0].set_title("Validation Accuracy vs. Epochs for Different Learning Rates")
-    axs[0].set_xlabel("Epochs")
-    axs[0].set_ylabel("Validation Accuracy")
-    axs[0].legend()
-    axs[0].grid(True)
+        plt.plot(epochs_range, epoch_accuracy, label=f'LR={lr}')
+    plt.title("Validation Accuracy vs. Epochs for Different Learning Rates")
+    plt.xlabel("Epochs")
+    plt.ylabel("Validation Accuracy")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
-    for lr in learning_rates:
-        val_loss = results[lr]['val_loss']
-        epochs_range = range(1, len(val_loss) + 1)
-        axs[1].plot(epochs_range, val_loss, label=f'LR={lr}')
-    axs[1].set_title("Validation Loss vs. Epochs for Different Learning Rates")
-    axs[1].set_xlabel("Epochs")
-    axs[1].set_ylabel("Validation Loss")
-    axs[1].legend()
-    axs[1].grid(True)
-
-    axs[2].bar(
+    plt.figure(figsize=(10, 6))
+    plt.bar(
         time_results.keys(),
         time_results.values(),
         color='skyblue',
-        width=0.05
+        width=0.5
     )
-    axs[2].set_xticks(learning_rates)
-    axs[2].set_title("Training Time for Different Learning Rates")
-    axs[2].set_xlabel("Learning Rate")
-    axs[2].set_ylabel("Training Time (seconds)")
-    axs[2].grid(axis='y')
-
-    plt.tight_layout()
+    plt.xticks(learning_rates)
+    plt.title("Training Time for Different Learning Rates")
+    plt.xlabel("Learning Rate")
+    plt.ylabel("Training Time (seconds)")
+    plt.grid(axis='y')
     plt.show()
 
 
@@ -121,7 +110,7 @@ def batch_size_test(architecture, device, criterion, epochs):
         speed_results.keys(),
         speed_results.values(),
         color='skyblue',
-        width=10
+        width=0.5
     )
     axs[1].set_xticks(batch_sizes)
     axs[1].set_title("Training Speed for Different Batch Sizes")
@@ -147,8 +136,90 @@ def configure_test():
     return device, loaders, criterion
 
 
+def configuration_test(architecture, device, criterion, epochs):
+    configurations = [
+        {
+            "learning_rate": 0.0005,
+            "train_batch_size": 64,
+            "epochs": epochs
+        },
+        {
+            "learning_rate": 0.001,
+            "train_batch_size": 128,
+            "epochs": epochs
+        },
+        {
+            "learning_rate": 0.01,
+            "train_batch_size": 256,
+            "epochs": epochs
+        },
+        {
+            "learning_rate": 0.005,
+            "train_batch_size": 32,
+            "epochs": epochs
+        },
+        {
+            "learning_rate": 0.0001,
+            "train_batch_size": 16,
+            "epochs": epochs
+        }
+    ]
+    results = {}
+    time_results = {}
+
+    for config in configurations:
+        print(f"\nTesting configuration: {config}")
+        model = get_model(architecture).to(device)
+        optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])
+
+        loaders = load_emnist_data(
+            train_config["emnist_type"],
+            config["train_batch_size"],
+            train_config["subsample_size"],
+            train_config["cpu_workers"]
+        )
+
+        # Measure training time
+        start_time = time.time()
+        config_results = train(model, loaders, criterion, optimizer, device, config["epochs"])
+        elapsed_time = time.time() - start_time
+
+        results[str(config)] = config_results
+        time_results[str(config)] = elapsed_time
+
+    # Plot validation accuracy
+    plt.figure(figsize=(12, 6))
+    for config in configurations:
+        config_key = str(config)
+        epoch_accuracy = results[config_key]['epoch_accuracy']
+        epochs_range = range(1, len(epoch_accuracy) + 1)
+        plt.plot(epochs_range, epoch_accuracy, label=f"LR={config['learning_rate']}, BS={config['train_batch_size']}")
+    plt.title("Validation Accuracy vs. Epochs for Different Configurations")
+    plt.xlabel("Epochs")
+    plt.ylabel("Validation Accuracy")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # Plot training time for each configuration
+    plt.figure(figsize=(12, 6))
+    plt.bar(
+        time_results.keys(),
+        time_results.values(),
+        color='skyblue',
+        width=0.5
+    )
+    plt.xticks(rotation=45, ha='right')
+    plt.title("Training Time for Different Configurations")
+    plt.xlabel("Configuration (LR, BS)")
+    plt.ylabel("Training Time (seconds)")
+    plt.grid(axis='y')
+    plt.tight_layout()
+    plt.show()
+
+
 def main(architecture):
-    test_epochs = 30
+    test_epochs = 10
     device, loaders, criterion = configure_test()
     print(f"\n--- Testing {architecture} model ---")
     epoch_test(architecture, device, loaders, criterion, test_epochs)
@@ -158,6 +229,9 @@ def main(architecture):
 
     print("\n--- Testing different batch sizes ---")
     batch_size_test(architecture, device, criterion, test_epochs)
+
+    print("\n--- Testing different configurations for training ---")
+    configuration_test(architecture, device, criterion, test_epochs)
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
