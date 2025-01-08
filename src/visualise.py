@@ -24,7 +24,6 @@ def show_performance_curve(
     plt.plot(train_values, label=f"Train {metric_label}")
     plt.plot(val_values, label=f"Validation {metric_label}")
 
-    # If an intersection is found, mark the first one
     if len(intersection_indices) > 0:
         intersection_idx = intersection_indices[0]
         intersection_value = train_values[intersection_idx]
@@ -34,7 +33,7 @@ def show_performance_curve(
             label='Intersection'
         )
         plt.annotate(
-            f'Optimal Value: {intersection_value:.4f}',
+            f'Value: {intersection_value:.4f}',
             xy=(intersection_idx, intersection_value),
             xytext=(intersection_idx + 0.5, intersection_value),
             fontsize=10,
