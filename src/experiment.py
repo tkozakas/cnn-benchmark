@@ -86,6 +86,7 @@ def learning_rate_test(architecture, device, loaders, criterion, epochs):
     plt.tight_layout()
     plt.show()
 
+
 def configuration_test(architecture, device, criterion, epochs):
     configurations = [
         {"learning_rate": 0.0001, "train_batch_size": 16},
@@ -117,12 +118,13 @@ def configuration_test(architecture, device, criterion, epochs):
         )
         config_results = train(model, loaders, criterion, optimizer, device, epochs)
 
-        results[str(config)] = config_results
+        config_key = str(config)
+        results[config_key] = config_results
 
-        save_results_to_csv(f"config_{config}_results.csv", config_results, {"Configuration": str(config)})
+        save_results_to_csv(f"config_{config_key}_results.csv", config_results, {"Configuration": config_key})
 
     config_labels = [f"LR={config['learning_rate']}, BS={config['train_batch_size']}" for config in configurations]
-    batch_times = [results[c]['elapsed_time'] for c in configurations]
+    batch_times = [results[str(config)]['elapsed_time'] for config in configurations]
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
@@ -152,6 +154,7 @@ def configuration_test(architecture, device, criterion, epochs):
             ylabel="Validation Loss"
         )
 
+    # Plot bar chart for training times
     plot_bar_chart(
         axs[1, 0],
         config_labels,
