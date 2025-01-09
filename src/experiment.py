@@ -89,14 +89,12 @@ def learning_rate_test(architecture, device, loaders, criterion, epochs):
 
 def configuration_test(architecture, device, criterion, epochs):
     configurations = [
-        {"learning_rate": 0.0001, "train_batch_size": 16},
         {"learning_rate": 0.001, "train_batch_size": 16},
         {"learning_rate": 0.01, "train_batch_size": 16},
-        {"learning_rate": 0.1, "train_batch_size": 16},
-        {"learning_rate": 0.0001, "train_batch_size": 32},
-        {"learning_rate": 0.001, "train_batch_size": 32},
-        {"learning_rate": 0.01, "train_batch_size": 32},
-        {"learning_rate": 0.1, "train_batch_size": 32},
+        {"learning_rate": 0.001, "train_batch_size": 64},
+        {"learning_rate": 0.01, "train_batch_size": 64},
+        {"learning_rate": 0.001, "train_batch_size": 128},
+        {"learning_rate": 0.01, "train_batch_size": 128},
     ]
 
     results = {}
@@ -226,6 +224,8 @@ def batch_size_test(architecture, device, criterion, epochs):
         bar_width=6
     )
 
+    print_test_results(results, title="batch_size")
+
     # Hide unused subplot
     axs[1, 1].axis('off')
 
@@ -252,14 +252,14 @@ def configure_test():
 def main(architecture):
     test_epochs = 50
     device, loaders, criterion = configure_test()
-    print(f"\n--- Testing {architecture} model ---")
-    epoch_test(architecture, device, loaders, criterion, test_epochs)
+    # print(f"\n--- Testing {architecture} model ---")
+    # epoch_test(architecture, device, loaders, criterion, test_epochs)
 
-    print("\n--- Testing different learning rates ---")
-    learning_rate_test(architecture, device, loaders, criterion, test_epochs)
+    # print("\n--- Testing different learning rates ---")
+    # learning_rate_test(architecture, device, loaders, criterion, test_epochs)
 
-    print("\n--- Testing different batch sizes ---")
-    batch_size_test(architecture, device, criterion, test_epochs)
+    # print("\n--- Testing different batch sizes ---")
+    # batch_size_test(architecture, device, criterion, test_epochs)
 
     print("\n--- Testing different configurations for training ---")
     configuration_test(architecture, device, criterion, test_epochs)
