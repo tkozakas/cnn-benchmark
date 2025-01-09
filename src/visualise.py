@@ -99,10 +99,43 @@ def plot_results(results):
     show_performance_curve(results, train_key="epoch_precision", val_key="val_precision", metric_label="Precision")
 
 
-def print_test_results(results):
-    print(f"Test Loss: {results['test_loss']:.4f} | "
-          f"Test Accuracy: {results['test_accuracy']:.4f} | "
-          f"Test Precision: {results['test_precision']:.4f}")
+def print_test_results(results, title="test"):
+    headers = ["Parameter", "Test Loss", "Test Accuracy", "Test Precision"]
+
+    row_format = (
+        "{:<15} "  # Parameter
+        "{:<10} "  # Test Loss
+        "{:<10} "  # Test Accuracy
+        "{:<10}"  # Test Precision
+    )
+
+    print(row_format.format(*headers))
+    print("-" * 50)
+
+    table_data = []
+
+    for param, config_results in results.items():
+        row = [
+            param,
+            f"{config_results['test_loss']:.4f}",
+            f"{config_results['test_accuracy']:.4f}",
+            f"{config_results['test_precision']:.4f}"
+        ]
+        table_data.append(row)
+        print(row_format.format(*row))
+
+    save_test_results_to_csv(f"{title}_test_results.csv", headers, table_data)
+
+
+def save_test_results_to_csv(file_name, headers, table_data):
+    directory = os.path.join(os.path.dirname(os.getcwd()), "test_data")
+    os.makedirs(directory, exist_ok=True)
+    file_path = os.path.join(directory, file_name)
+
+    with open(file_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
+        writer.writerows(table_data)
 
 def print_results_table(results):
     num_epochs = len(results["epoch_loss"])

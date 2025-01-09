@@ -85,7 +85,7 @@ def learning_rate_test(architecture, device, loaders, criterion, epochs):
         ylabel="Training Time (seconds)"
     )
 
-    print_test_results(results)
+    print_test_results(results, title="learning_rate")
 
     axs[1, 1].axis('off')
     plt.tight_layout()
@@ -164,7 +164,7 @@ def configuration_test(architecture, device, criterion, epochs):
         ylabel="Training Time (seconds)"
     )
 
-    print_test_results(results)
+    print_test_results(results, title="configuration")
 
     axs[1, 1].axis('off')
     plt.tight_layout()
@@ -224,7 +224,6 @@ def batch_size_test(architecture, device, criterion, epochs):
             ylabel="Validation Loss"
         )
 
-    print(speed_results)
     plot_bar_chart(
         axs[1, 0],
         [str(batch_size) for batch_size in batch_sizes],
@@ -234,7 +233,7 @@ def batch_size_test(architecture, device, criterion, epochs):
         ylabel="Training Time (seconds)"
     )
 
-    print_test_results(results)
+    print_test_results(results, title="batch_size")
 
     # Hide unused subplot
     axs[1, 1].axis('off')
