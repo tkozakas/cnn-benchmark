@@ -82,16 +82,12 @@ def plot_metric_vs_epochs(ax, epochs_range, metric_data, label, title, xlabel, y
     ax.grid(True)
 
 
-def plot_bar_chart(ax, x_labels, y_values, title, xlabel, ylabel, bar_width=0.5):
-    ax.bar(
-        x_labels,
-        y_values,
-        color='skyblue',
-        width=bar_width,
-        align='center'
-    )
-    ax.set_xticks(range(len(x_labels)))
-    ax.set_xticklabels(x_labels, rotation=45, ha='right')
+def plot_bar_chart(ax, x_values, heights, title, xlabel, ylabel, bar_width=0.5):
+    ax.bar(x_values, heights, color='skyblue', width=bar_width, align='center')
+
+    ax.set_xticks(x_values)
+    ax.set_xticklabels(x_values, rotation=45, ha='right')
+
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -113,7 +109,10 @@ def print_results_table(results):
         "Train Prec",
         "Val Loss",
         "Val Acc",
-        "Val Prec"
+        "Val Prec",
+        "Test Loss",
+        "Test Acc",
+        "Test Prec"
     ]
 
     row_format = (

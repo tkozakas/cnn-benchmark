@@ -52,8 +52,8 @@ def learning_rate_test(architecture, device, loaders, criterion, epochs):
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
     for lr in learning_rates:
-        epoch_accuracy = results[lr]['epoch_accuracy']
-        epoch_loss = results[lr]['epoch_loss']
+        epoch_accuracy = results[lr]['val_accuracy']
+        epoch_loss = results[lr]['val_loss']
         epochs_range = range(1, len(epoch_accuracy) + 1)
 
         plot_metric_vs_epochs(
@@ -84,6 +84,8 @@ def learning_rate_test(architecture, device, loaders, criterion, epochs):
         xlabel="Learning Rate",
         ylabel="Training Time (seconds)"
     )
+
+    print_results_table(results)
 
     axs[1, 1].axis('off')
     plt.tight_layout()
@@ -129,8 +131,8 @@ def configuration_test(architecture, device, criterion, epochs):
 
     for config, label in zip(configurations, config_labels):
         config_key = str(config)
-        epoch_accuracy = results[config_key]['epoch_accuracy']
-        epoch_loss = results[config_key]['epoch_loss']
+        epoch_accuracy = results[config_key]['val_accuracy']
+        epoch_loss = results[config_key]['val_loss']
         epochs_range = range(1, len(epoch_accuracy) + 1)
 
         plot_metric_vs_epochs(
@@ -161,6 +163,8 @@ def configuration_test(architecture, device, criterion, epochs):
         xlabel="Configuration (LR, BS)",
         ylabel="Training Time (seconds)"
     )
+
+    print_results_table(results)
 
     axs[1, 1].axis('off')
     plt.tight_layout()
@@ -196,8 +200,8 @@ def batch_size_test(architecture, device, criterion, epochs):
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
     for batch_size in batch_sizes:
-        epoch_accuracy = results[batch_size]['epoch_accuracy']
-        epoch_loss = results[batch_size]['epoch_loss']
+        epoch_accuracy = results[batch_size]['val_accuracy']
+        epoch_loss = results[batch_size]['val_loss']
         epochs_range = range(1, len(epoch_accuracy) + 1)
 
         plot_metric_vs_epochs(
@@ -220,15 +224,17 @@ def batch_size_test(architecture, device, criterion, epochs):
             ylabel="Validation Loss"
         )
 
+    print(speed_results)
     plot_bar_chart(
         axs[1, 0],
-        list(speed_results.keys()),
+        [str(batch_size) for batch_size in batch_sizes],
         speed_results.values(),
         title="Training Speed for Different Batch Sizes",
         xlabel="Batch Size",
-        ylabel="Training Time (seconds)",
-        bar_width=6
+        ylabel="Training Time (seconds)"
     )
+
+    print_results_table(results)
 
     # Hide unused subplot
     axs[1, 1].axis('off')
@@ -253,7 +259,7 @@ def configure_test():
 
 
 def main(architecture):
-    test_epochs = 2
+    test_epochs = 100
     device, loaders, criterion = configure_test()
     print(f"\n--- Testing {architecture} model ---")
     epoch_test(architecture, device, loaders, criterion, test_epochs)

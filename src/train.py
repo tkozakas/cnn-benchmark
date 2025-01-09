@@ -40,7 +40,10 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
         "val_loss": [],
         "val_accuracy": [],
         "val_precision": [],
-        "learning_rate": []
+        "learning_rate": [],
+        "test_accuracy": [],
+        "test_precision": [],
+        "test_loss": []
     }
 
     train_precision = MulticlassPrecision(num_classes=NUM_CLASSES).to(device)
@@ -119,6 +122,9 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
 
     test_loss, test_acc, test_presicion = evaluate(model, test_loader, criterion, device)
     print(f"Test Loss: {test_loss:.4f} | Test Accuracy: {test_acc:.4f} | Test Precision: {test_presicion:.4f}")
+    results["test_loss"] = test_loss
+    results["test_accuracy"] = test_acc
+    results["test_precision"] = test
 
     return results
 
