@@ -13,8 +13,6 @@ TODO
 
 ## Usage
 ```bash
-# Download datasets
-bash download_datasets.sh
 # Activate virtual environment
 conda activate ocr-benchmark
 # Train models
