@@ -1,3 +1,6 @@
+import csv
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -114,3 +117,40 @@ def print_results_table(results):
                 f"{results['val_precision'][epoch_idx]:.4f}"
             )
         )
+
+
+def save_results_to_csv(file_name, results, additional_fields=None):
+    directory = os.path.join(os.path.dirname(os.getcwd()), "test_data")
+    os.makedirs(directory, exist_ok=True)
+    file_path = os.path.join(directory, file_name)
+
+    headers = [
+        "Epoch",
+        "Train Loss",
+        "Train Accuracy",
+        "Train Precision",
+        "Validation Loss",
+        "Validation Accuracy",
+        "Validation Precision"
+    ]
+
+    if additional_fields:
+        headers += list(additional_fields.keys())
+
+    with open(file_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
+
+        for epoch in range(len(results["epoch_loss"])):
+            row = [
+                epoch + 1,
+                f"{results['epoch_loss'][epoch]:.4f}",
+                f"{results['epoch_accuracy'][epoch]:.4f}",
+                f"{results['epoch_precision'][epoch]:.4f}",
+                f"{results['val_loss'][epoch]:.4f}",
+                f"{results['val_accuracy'][epoch]:.4f}",
+                f"{results['val_precision'][epoch]:.4f}"
+            ]
+            if additional_fields:
+                row += [additional_fields[key] for key in additional_fields]
+            writer.writerow(row)
