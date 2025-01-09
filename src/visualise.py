@@ -94,19 +94,19 @@ def plot_bar_chart(ax, x_values, heights, title, xlabel, ylabel, bar_width=0.5):
     ax.grid(axis='y', linestyle='--', alpha=0.7)
 
 def plot_results(results):
-    show_performance_curve(results, train_key="epoch_accuracy", val_key="val_accuracy", metric_label="Accuracy")
-    show_performance_curve(results, train_key="epoch_loss", val_key="val_loss", metric_label="Loss")
-    show_performance_curve(results, train_key="epoch_precision", val_key="val_precision", metric_label="Precision")
+    show_performance_curve(results, train_key="train_accuracy", val_key="val_accuracy", metric_label="Accuracy")
+    show_performance_curve(results, train_key="train_loss", val_key="val_loss", metric_label="Loss")
 
 
 def print_test_results(results, title="test"):
-    headers = ["Parameter", "Test Loss", "Test Accuracy", "Test Precision"]
+    headers = ["Parameter", "Test Loss", "Test Accuracy", "Time", "Epochs"]
 
     row_format = (
         "{:<15} "  # Parameter
         "{:<10} "  # Test Loss
         "{:<10} "  # Test Accuracy
-        "{:<10}"  # Test Precision
+        "{:<10} "  # Test Time
+        "{:<10}"   # Epochs
     )
 
     print(row_format.format(*headers))
@@ -119,13 +119,13 @@ def print_test_results(results, title="test"):
             param,
             f"{config_results['test_loss']:.4f}",
             f"{config_results['test_accuracy']:.4f}",
-            f"{config_results['test_precision']:.4f}"
+            f"{config_results['elapsed_time']:.2f}",
+            f"{config_results['epoch_count']}"
         ]
         table_data.append(row)
         print(row_format.format(*row))
 
     save_test_results_to_csv(f"{title}_test_results.csv", headers, table_data)
-
 
 def save_test_results_to_csv(file_name, headers, table_data):
     directory = os.path.join(os.path.dirname(os.getcwd()), "test_data")
@@ -138,16 +138,14 @@ def save_test_results_to_csv(file_name, headers, table_data):
         writer.writerows(table_data)
 
 def print_results_table(results):
-    num_epochs = len(results["epoch_loss"])
+    num_epochs = len(results["train_loss"])
 
     headers = [
         "Epoch",
         "Train Loss",
         "Train Acc",
-        "Train Prec",
         "Val Loss",
         "Val Acc",
-        "Val Prec",
     ]
 
     row_format = (
@@ -167,12 +165,10 @@ def print_results_table(results):
         print(
             row_format.format(
                 epoch_idx + 1,
-                f"{results['epoch_loss'][epoch_idx]:.4f}",
-                f"{results['epoch_accuracy'][epoch_idx]:.4f}",
-                f"{results['epoch_precision'][epoch_idx]:.4f}",
+                f"{results['train_loss'][epoch_idx]:.4f}",
+                f"{results['train_accuracy'][epoch_idx]:.4f}"
                 f"{results['val_loss'][epoch_idx]:.4f}",
-                f"{results['val_accuracy'][epoch_idx]:.4f}",
-                f"{results['val_precision'][epoch_idx]:.4f}"
+                f"{results['val_accuracy'][epoch_idx]:.4f}"
             )
         )
 
@@ -185,11 +181,9 @@ def save_results_to_csv(file_name, results, additional_fields=None):
     headers = [
         "Epoch",
         "Train Loss",
-        "Train Accuracy",
-        "Train Precision",
+        "Train Accuracy"
         "Validation Loss",
-        "Validation Accuracy",
-        "Validation Precision"
+        "Validation Accuracy"
     ]
 
     if additional_fields:
@@ -199,15 +193,13 @@ def save_results_to_csv(file_name, results, additional_fields=None):
         writer = csv.writer(file)
         writer.writerow(headers)
 
-        for epoch in range(len(results["epoch_loss"])):
+        for epoch in range(len(results["train_loss"])):
             row = [
                 epoch + 1,
-                f"{results['epoch_loss'][epoch]:.4f}",
-                f"{results['epoch_accuracy'][epoch]:.4f}",
-                f"{results['epoch_precision'][epoch]:.4f}",
+                f"{results['train_loss'][epoch]:.4f}",
+                f"{results['train_accuracy'][epoch]:.4f}",
                 f"{results['val_loss'][epoch]:.4f}",
                 f"{results['val_accuracy'][epoch]:.4f}",
-                f"{results['val_precision'][epoch]:.4f}"
             ]
             if additional_fields:
                 row += [additional_fields[key] for key in additional_fields]

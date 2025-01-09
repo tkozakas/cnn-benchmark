@@ -6,6 +6,8 @@ Options:
     -h --help                     Show this help message.
     --architecture=ARCH           Model architecture to use (e.g., EmnistCNN, CRNN) [default: EmnistCNN].
 """
+import time
+
 import torch
 from docopt import docopt
 from torch import nn, optim
@@ -29,27 +31,27 @@ NUM_CLASSES = 47
 
 
 def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, early_stopping_patience=10):
+
     train_loader = loaders["train"]
     val_loader = loaders["validation"]
     test_loader = loaders["test"]
 
     results = {
-        "epoch_loss": [],
-        "epoch_accuracy": [],
-        "epoch_precision": [],
+        "train_loss": [],
+        "train_accuracy": [],
         "val_loss": [],
         "val_accuracy": [],
-        "val_precision": [],
         "learning_rate": [],
         "test_accuracy": [],
-        "test_precision": [],
-        "test_loss": []
+        "test_loss": [],
+        "epoch_count": [],
+        "elapsed_time": 0,
     }
 
-    train_precision = MulticlassPrecision(num_classes=NUM_CLASSES).to(device)
-
+    total_start_time = time.time()
     best_val_loss = float('inf')
     patience_counter = 0
+    training_elapsed_time = 0
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -57,7 +59,7 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
         correct = 0
         total = 0
 
-        train_precision.reset()
+        train_start_time = time.time()
 
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
@@ -74,25 +76,21 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
             correct += (predictions == labels).sum().item()
             total += images.size(0)
 
-            # Update Precision metric with current batch
-            train_precision.update(predictions, labels)
+        # End timing the training phase
+        train_end_time = time.time()
+        training_elapsed_time += train_end_time - train_start_time
 
         # Compute average training loss and accuracy
-        epoch_loss = running_loss / total
+        train_loss = running_loss / total
         epoch_acc = correct / total
 
-        # Compute Precision for the epoch
-        epoch_precision = train_precision.compute().item()
-
-        results["epoch_loss"].append(epoch_loss)
-        results["epoch_accuracy"].append(epoch_acc)
-        results["epoch_precision"].append(epoch_precision)
+        results["train_loss"].append(train_loss)
+        results["train_accuracy"].append(epoch_acc)
 
         # Validation phase
-        val_loss, val_acc, val_precision = evaluate(model, val_loader, criterion, device)
+        val_loss, val_acc = evaluate(model, val_loader, criterion, device)
         results["val_loss"].append(val_loss)
         results["val_accuracy"].append(val_acc)
-        results["val_precision"].append(val_precision)
 
         current_lr = optimizer.param_groups[0]['lr']
         results["learning_rate"].append(current_lr)
@@ -105,6 +103,8 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
             patience_counter += 1
             if patience_counter >= early_stopping_patience:
                 save_model(model, f"{model.__class__.__name__}_best.pth")
+                total_elapsed_time = time.time() - total_start_time
+                results["elapsed_time"] = total_elapsed_time
                 print(f"Early stopping triggered after epoch {epoch}.")
                 break
 
@@ -112,22 +112,23 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
             scheduler.step()
 
         print(f"Epoch [{epoch}/{epochs}] | "
-              f"Train Loss: {epoch_loss:.4f} | Train Accuracy: {epoch_acc:.4f} | "
-              f"Train Precision: {epoch_precision:.4f} | "
-              f"Val Loss: {val_loss:.4f} | Val Accuracy: {val_acc:.4f} | "
-              f"Val Precision: {val_precision:.4f}")
+              f"Train Loss: {train_loss:.4f} | Train Accuracy: {epoch_acc:.4f} | "
+              f"Val Loss: {val_loss:.4f} | Val Accuracy: {val_acc:.4f}")
 
         if epoch % train_config["save_interval"] == 0:
             save_model(model, f"{model.__class__.__name__}_epoch_{epoch}.pth")
 
-    test_loss, test_acc, test_presicion = evaluate(model, test_loader, criterion, device)
-    print(f"Test Loss: {test_loss:.4f} | Test Accuracy: {test_acc:.4f} | Test Precision: {test_presicion:.4f}")
+    test_loss, test_acc = evaluate(model, test_loader, criterion, device)
+    print(f"Test Loss: {test_loss:.4f} | Test Accuracy: {test_acc:.4f}")
     results["test_loss"] = test_loss
     results["test_accuracy"] = test_acc
-    results["test_precision"] = test_presicion
+
+    total_elapsed_time = time.time() - total_start_time
+    results["elapsed_time"] = total_elapsed_time
+
+    print(f"Total Elapsed Time: {total_elapsed_time:.2f} seconds")
 
     return results
-
 
 def evaluate(model, loader, criterion, device):
     model.eval()
@@ -154,9 +155,8 @@ def evaluate(model, loader, criterion, device):
 
     loss = running_loss / total
     accuracy = correct / total
-    precision = precision_metric.compute().item()
 
-    return loss, accuracy, precision
+    return loss, accuracy
 
 
 def load_emnist_data(emnist_type, batch_size, subsample_size, cpu_workers, val_split=0.2):
