@@ -223,7 +223,8 @@ def batch_size_test(architecture, device, criterion, epochs):
         batch_times,
         title="Training Speed for Different Batch Sizes",
         xlabel="Batch Size",
-        ylabel="Training Time (seconds)"
+        ylabel="Training Time (seconds)",
+        bar_width=6
     )
 
     # Hide unused subplot
