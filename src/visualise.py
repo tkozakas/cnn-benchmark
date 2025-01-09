@@ -73,6 +73,30 @@ def plot_confusion_matrix(model, loader, device, classes):
     plt.show()
 
 
+def plot_metric_vs_epochs(ax, epochs_range, metric_data, label, title, xlabel, ylabel):
+    ax.plot(epochs_range, metric_data, label=label)
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.legend()
+    ax.grid(True)
+
+
+def plot_bar_chart(ax, x_labels, y_values, title, xlabel, ylabel, bar_width=0.5):
+    ax.bar(
+        x_labels,
+        y_values,
+        color='skyblue',
+        width=bar_width,
+        align='center'
+    )
+    ax.set_xticks(range(len(x_labels)))
+    ax.set_xticklabels(x_labels, rotation=45, ha='right')
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+
 def plot_results(results):
     show_performance_curve(results, train_key="epoch_accuracy", val_key="val_accuracy", metric_label="Accuracy")
     show_performance_curve(results, train_key="epoch_loss", val_key="val_loss", metric_label="Loss")

@@ -16,7 +16,7 @@ from torch import optim, nn
 from src.config import train_config
 from src.model import get_model
 from src.train import train, load_emnist_data
-from src.visualise import plot_results, print_results_table, save_results_to_csv
+from src.visualise import plot_results, print_results_table, save_results_to_csv, plot_bar_chart, plot_metric_vs_epochs
 
 
 def epoch_test(architecture, device, loaders, criterion, epochs):
@@ -51,47 +51,43 @@ def learning_rate_test(architecture, device, loaders, criterion, epochs):
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
-    # Plot Validation Accuracy and Loss for Different Learning Rates
     for lr in learning_rates:
         epoch_accuracy = results[lr]['epoch_accuracy']
         epoch_loss = results[lr]['epoch_loss']
         epochs_range = range(1, len(epoch_accuracy) + 1)
 
-        axs[0, 0].plot(epochs_range, epoch_accuracy, label=f'LR={lr}')
-        axs[0, 1].plot(epochs_range, epoch_loss, label=f'LR={lr}')
+        plot_metric_vs_epochs(
+            axs[0, 0],
+            epochs_range,
+            epoch_accuracy,
+            label=f"LR={lr}",
+            title="Validation Accuracy vs. Epochs for Learning Rates",
+            xlabel="Epochs",
+            ylabel="Validation Accuracy"
+        )
 
-    axs[0, 0].set_title("Validation Accuracy vs. Epochs for Learning Rates")
-    axs[0, 0].set_xlabel("Epochs")
-    axs[0, 0].set_ylabel("Validation Accuracy")
-    axs[0, 0].legend()
-    axs[0, 0].grid(True)
+        plot_metric_vs_epochs(
+            axs[0, 1],
+            epochs_range,
+            epoch_loss,
+            label=f"LR={lr}",
+            title="Validation Loss vs. Epochs for Learning Rates",
+            xlabel="Epochs",
+            ylabel="Validation Loss"
+        )
 
-    axs[0, 1].set_title("Validation Loss vs. Epochs for Learning Rates")
-    axs[0, 1].set_xlabel("Epochs")
-    axs[0, 1].set_ylabel("Validation Loss")
-    axs[0, 1].legend()
-    axs[0, 1].grid(True)
-
-    # Bar Plot for Training Speed
-    axs[1, 0].bar(
+    plot_bar_chart(
+        axs[1, 0],
         [str(lr) for lr in learning_rates],
         time_results.values(),
-        color='skyblue',
-        width=0.5
+        title="Training Speed for Different Learning Rates",
+        xlabel="Learning Rate",
+        ylabel="Training Time (seconds)"
     )
-    axs[1, 0].set_xticks([str(lr) for lr in learning_rates])
-    axs[1, 0].set_xticklabels([str(lr) for lr in learning_rates], rotation=45, ha='right')
-    axs[1, 0].set_title("Training Speed for Different Learning Rates")
-    axs[1, 0].set_xlabel("Learning Rate")
-    axs[1, 0].set_ylabel("Training Time (seconds)")
-    axs[1, 0].grid(axis='y', linestyle='--', alpha=0.7)
 
-    # Hide unused subplot
     axs[1, 1].axis('off')
-
     plt.tight_layout()
     plt.show()
-
 
 def configuration_test(architecture, device, criterion, epochs):
     configurations = [
@@ -127,7 +123,6 @@ def configuration_test(architecture, device, criterion, epochs):
 
         save_results_to_csv(f"config_{config}_results.csv", config_results, {"Configuration": str(config)})
 
-    # Shorten labels for configurations
     config_labels = [f"LR={config['learning_rate']}, BS={config['train_batch_size']}" for config in configurations]
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))
@@ -138,34 +133,102 @@ def configuration_test(architecture, device, criterion, epochs):
         epoch_loss = results[config_key]['epoch_loss']
         epochs_range = range(1, len(epoch_accuracy) + 1)
 
-        axs[0, 0].plot(epochs_range, epoch_accuracy, label=label)
-        axs[0, 1].plot(epochs_range, epoch_loss, label=label)
+        plot_metric_vs_epochs(
+            axs[0, 0],
+            epochs_range,
+            epoch_accuracy,
+            label=label,
+            title="Validation Accuracy vs. Epochs for Configurations",
+            xlabel="Epochs",
+            ylabel="Validation Accuracy"
+        )
 
-    axs[0, 0].set_title("Validation Accuracy vs. Epochs for Configurations")
-    axs[0, 0].set_xlabel("Epochs")
-    axs[0, 0].set_ylabel("Validation Accuracy")
-    axs[0, 0].legend()
-    axs[0, 0].grid(True)
+        plot_metric_vs_epochs(
+            axs[0, 1],
+            epochs_range,
+            epoch_loss,
+            label=label,
+            title="Validation Loss vs. Epochs for Configurations",
+            xlabel="Epochs",
+            ylabel="Validation Loss"
+        )
 
-    axs[0, 1].set_title("Validation Loss vs. Epochs for Configurations")
-    axs[0, 1].set_xlabel("Epochs")
-    axs[0, 1].set_ylabel("Validation Loss")
-    axs[0, 1].legend()
-    axs[0, 1].grid(True)
-
-    # Bar Plot for Training Speed
-    axs[1, 0].bar(
+    plot_bar_chart(
+        axs[1, 0],
         config_labels,
         time_results.values(),
-        color='skyblue',
-        width=0.5
+        title="Training Speed for Different Configurations",
+        xlabel="Configuration (LR, BS)",
+        ylabel="Training Time (seconds)"
     )
-    axs[1, 0].set_xticks(range(len(config_labels)))
-    axs[1, 0].set_xticklabels(config_labels, rotation=45, ha='right')
-    axs[1, 0].set_title("Training Speed for Different Configurations")
-    axs[1, 0].set_xlabel("Configuration (LR, BS)")
-    axs[1, 0].set_ylabel("Training Time (seconds)")
-    axs[1, 0].grid(axis='y', linestyle='--', alpha=0.7)
+
+    axs[1, 1].axis('off')
+    plt.tight_layout()
+    plt.show()
+
+
+def batch_size_test(architecture, device, criterion, epochs):
+    batch_sizes = [16, 32, 64, 128, 256]
+    results = {}
+    speed_results = {}
+
+    for batch_size in batch_sizes:
+        print(f"\nTesting batch size: {batch_size}")
+        loaders = load_emnist_data(
+            train_config["emnist_type"],
+            batch_size,
+            train_config["subsample_size"],
+            train_config["cpu_workers"]
+        )
+
+        model = get_model(architecture).to(device)
+        optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
+
+        start_time = time.time()
+        batch_results = train(model, loaders, criterion, optimizer, device, epochs)
+        elapsed_time = time.time() - start_time
+
+        results[batch_size] = batch_results
+        speed_results[batch_size] = elapsed_time
+
+        save_results_to_csv(f"batch_size_{batch_size}_results.csv", batch_results, {"Batch Size": batch_size})
+
+    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+
+    for batch_size in batch_sizes:
+        epoch_accuracy = results[batch_size]['epoch_accuracy']
+        epoch_loss = results[batch_size]['epoch_loss']
+        epochs_range = range(1, len(epoch_accuracy) + 1)
+
+        plot_metric_vs_epochs(
+            axs[0, 0],
+            epochs_range,
+            epoch_accuracy,
+            label=f"Batch={batch_size}",
+            title="Validation Accuracy vs. Epochs for Batch Sizes",
+            xlabel="Epochs",
+            ylabel="Validation Accuracy"
+        )
+
+        plot_metric_vs_epochs(
+            axs[0, 1],
+            epochs_range,
+            epoch_loss,
+            label=f"Batch={batch_size}",
+            title="Validation Loss vs. Epochs for Batch Sizes",
+            xlabel="Epochs",
+            ylabel="Validation Loss"
+        )
+
+    plot_bar_chart(
+        axs[1, 0],
+        list(speed_results.keys()),
+        speed_results.values(),
+        title="Training Speed for Different Batch Sizes",
+        xlabel="Batch Size",
+        ylabel="Training Time (seconds)",
+        bar_width=6
+    )
 
     # Hide unused subplot
     axs[1, 1].axis('off')
@@ -187,83 +250,6 @@ def configure_test():
     )
     criterion = nn.CrossEntropyLoss()
     return device, loaders, criterion
-
-def configuration_test(architecture, device, criterion, epochs):
-    configurations = [
-        {"learning_rate": 0.0005, "train_batch_size": 64},
-        {"learning_rate": 0.001, "train_batch_size": 64},
-        {"learning_rate": 0.01, "train_batch_size": 64},
-        {"learning_rate": 0.0005, "train_batch_size": 256},
-        {"learning_rate": 0.001, "train_batch_size": 256},
-        {"learning_rate": 0.01, "train_batch_size": 256}
-    ]
-
-    results = {}
-    time_results = {}
-
-    for config in configurations:
-        print(f"\nTesting configuration: {config}")
-        model = get_model(architecture).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])
-
-        loaders = load_emnist_data(
-            train_config["emnist_type"],
-            config["train_batch_size"],
-            train_config["subsample_size"],
-            train_config["cpu_workers"]
-        )
-
-        start_time = time.time()
-        config_results = train(model, loaders, criterion, optimizer, device, epochs)
-        elapsed_time = time.time() - start_time
-
-        results[str(config)] = config_results
-        time_results[str(config)] = elapsed_time
-
-        save_results_to_csv(f"config_{config}_results.csv", config_results, {"Configuration": str(config)})
-
-    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-
-    for config in configurations:
-        config_key = str(config)
-        epoch_accuracy = results[config_key]['epoch_accuracy']
-        epoch_loss = results[config_key]['epoch_loss']
-        epochs_range = range(1, len(epoch_accuracy) + 1)
-
-        axs[0, 0].plot(epochs_range, epoch_accuracy, label=f"LR={config['learning_rate']}, BS={config['train_batch_size']}")
-        axs[0, 1].plot(epochs_range, epoch_loss, label=f"LR={config['learning_rate']}, BS={config['train_batch_size']}")
-
-    axs[0, 0].set_title("Validation Accuracy vs. Epochs for Configurations")
-    axs[0, 0].set_xlabel("Epochs")
-    axs[0, 0].set_ylabel("Validation Accuracy")
-    axs[0, 0].legend()
-    axs[0, 0].grid(True)
-
-    axs[0, 1].set_title("Validation Loss vs. Epochs for Configurations")
-    axs[0, 1].set_xlabel("Epochs")
-    axs[0, 1].set_ylabel("Validation Loss")
-    axs[0, 1].legend()
-    axs[0, 1].grid(True)
-
-    # Bar Plot for Training Speed
-    axs[1, 0].bar(
-        list(time_results.keys()),
-        time_results.values(),
-        color='skyblue',
-        width=0.5
-    )
-    axs[1, 0].set_xticks(list(time_results.keys()))
-    axs[1, 0].set_xticklabels(list(time_results.keys()), rotation=45, ha='right')
-    axs[1, 0].set_title("Training Speed for Different Configurations")
-    axs[1, 0].set_xlabel("Configuration (LR, BS)")
-    axs[1, 0].set_ylabel("Training Time (seconds)")
-    axs[1, 0].grid(axis='y', linestyle='--', alpha=0.7)
-
-    # Hide unused subplot
-    axs[1, 1].axis('off')
-
-    plt.tight_layout()
-    plt.show()
 
 
 def main(architecture):
