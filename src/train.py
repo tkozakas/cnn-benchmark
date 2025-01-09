@@ -4,7 +4,7 @@ Usage:
 
 Options:
     -h --help                     Show this help message.
-    --architecture=ARCH           Model architecture to use (e.g., EmnistCNN, CRNN) [default: EmnistCNN].
+    --architecture=ARCH           Model architecture to use (e.g., EmnistCNN_16_64_128, CRNN) [default: EmnistCNN_16_64_128].
 """
 import time
 

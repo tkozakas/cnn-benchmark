@@ -3,7 +3,7 @@ Usage:
     experiment.py [--architecture=ARCH]
 
 Options:
-    --architecture=ARCH   Specify the architecture to use [default: EmnistCNN].
+    --architecture=ARCH   Specify the architecture to use [default: EmnistCNN_16_64_128].
 """
 
 import matplotlib.pyplot as plt
@@ -14,7 +14,8 @@ from torch import optim, nn
 from src.config import train_config
 from src.model import get_model
 from src.train import train, load_emnist_data
-from src.visualise import plot_results, print_results_table, save_results_to_csv, plot_bar_chart, plot_metric_vs_epochs, print_test_results
+from src.visualise import plot_results, print_results_table, save_results_to_csv, plot_bar_chart, plot_metric_vs_epochs, print_test_results, \
+    plot_model_diffs
 
 
 def epoch_test(architecture, device, loaders, criterion, epochs):
@@ -249,8 +250,24 @@ def configure_test():
     return device, loaders, criterion
 
 
+def model_config_test(device, loaders, criterion, epochs):
+    architectures = ["EmnistCNN_16_64_128", "EmnistCNN_32_128_256", "EmnistCNN_8_32_64"]
+    results = {}
+
+    for architecture in architectures:
+        print(f"\nTesting model: {architecture}")
+        model = get_model(architecture).to(device)
+        optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
+        model_results = train(model, loaders, criterion, optimizer, device, epochs)
+
+        results[architecture] = model_results
+        save_results_to_csv(f"model_{architecture}_results.csv", model_results, {"Model": architecture})
+
+    print_test_results(results, title="model")
+    plot_model_diffs(results)
+
 def main(architecture):
-    test_epochs = 50
+    test_epochs = 10
     device, loaders, criterion = configure_test()
     # print(f"\n--- Testing {architecture} model ---")
     # epoch_test(architecture, device, loaders, criterion, test_epochs)
@@ -261,8 +278,11 @@ def main(architecture):
     # print("\n--- Testing different batch sizes ---")
     # batch_size_test(architecture, device, criterion, test_epochs)
 
-    print("\n--- Testing different configurations for training ---")
-    configuration_test(architecture, device, criterion, test_epochs)
+    # print("\n--- Testing different configurations for training ---")
+    # configuration_test(architecture, device, criterion, test_epochs)
+
+    print("\n--- Testing different model configurations ---")
+    model_config_test(device, loaders, criterion, test_epochs)
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)

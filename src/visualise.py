@@ -66,11 +66,15 @@ def plot_confusion_matrix(model, loader, device, classes):
 
     cm = confusion_matrix(all_labels, all_preds)
     plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=classes, yticklabels=classes)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=classes, yticklabels=classes,
+                annot_kws={"size": 7})
     plt.xlabel('Predicted Label')
     plt.ylabel('True Label')
     plt.title('Confusion Matrix')
+    plt.tight_layout()
     plt.show()
+
 
 
 def plot_metric_vs_epochs(ax, epochs_range, metric_data, label, title, xlabel, ylabel):
@@ -97,6 +101,22 @@ def plot_results(results):
     show_performance_curve(results, train_key="train_accuracy", val_key="val_accuracy", metric_label="Accuracy")
     show_performance_curve(results, train_key="train_loss", val_key="val_loss", metric_label="Loss")
 
+
+def plot_model_diffs(results):
+    plt.figure(figsize=(10, 6))
+
+    for architecture, data in results.items():
+        val_accuracy = data["val_accuracy"]
+        epochs_range = range(1, len(val_accuracy) + 1)
+        plt.plot(epochs_range, val_accuracy, label=architecture)
+
+    plt.title("Validation Accuracy vs. Epochs for Different Architectures")
+    plt.xlabel("Epochs")
+    plt.ylabel("Validation Accuracy")
+    plt.legend(title="Architecture")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 def print_test_results(results, title="test"):
     headers = ["Parameter", "Test Loss", "Test Accuracy", "Time", "Epochs"]

@@ -158,7 +158,7 @@ if __name__ == "__main__":
     image_path = args["<image_path>"]
     device = args["--device"] or ("cuda" if torch.cuda.is_available() else "cpu")
 
-    architecture = "EmnistCNN"
+    architecture = "EmnistCNN_16_64_128"
     model = load_model(architecture, model_path, device)
 
     dataset = load_dataset(train_config["emnist_type"])

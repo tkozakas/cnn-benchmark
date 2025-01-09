@@ -72,14 +72,12 @@ class EmnistCNN(nn.Module):
 
 
 def get_model(architecture):
-    if architecture == "EmnistCNN":
-        return EmnistCNN(**model_config["EmnistCNN"])
-    elif architecture == "Resnet18":
-        return torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=False,
-                              num_classes=model_config["Resnet18"]["num_classes"])
-    elif architecture == "Resnet18-pretrained":
-        return torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True,
-                              num_classes=model_config["Resnet18-pretrained"]["num_classes"])
+    if architecture == "EmnistCNN_16_64_128":
+        return EmnistCNN(**model_config["EmnistCNN_16_64_128"])
+    elif architecture == "EmnistCNN_32_128_256":
+        return EmnistCNN(**model_config["EmnistCNN_32_128_256"])
+    elif architecture == "EmnistCNN_8_32_64":
+        return EmnistCNN(**model_config["EmnistCNN_8_32_64"])
     else:
         raise ValueError(f"Unknown architecture: {architecture}")
 
