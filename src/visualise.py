@@ -99,6 +99,11 @@ def plot_results(results):
     show_performance_curve(results, train_key="epoch_precision", val_key="val_precision", metric_label="Precision")
 
 
+def print_test_results(results):
+    print(f"Test Loss: {results['test_loss']:.4f} | "
+          f"Test Accuracy: {results['test_accuracy']:.4f} | "
+          f"Test Precision: {results['test_precision']:.4f}")
+
 def print_results_table(results):
     num_epochs = len(results["epoch_loss"])
 
@@ -110,9 +115,6 @@ def print_results_table(results):
         "Val Loss",
         "Val Acc",
         "Val Prec",
-        "Test Loss",
-        "Test Acc",
-        "Test Prec"
     ]
 
     row_format = (
