@@ -219,7 +219,7 @@ def configuration_test(architecture, device, criterion, epochs):
 
 
 def main(architecture):
-    test_epochs = 2
+    test_epochs = 100
     device, loaders, criterion = configure_test()
     print(f"\n--- Testing {architecture} model ---")
     epoch_test(architecture, device, loaders, criterion, test_epochs)
