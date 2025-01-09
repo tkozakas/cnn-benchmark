@@ -110,7 +110,7 @@ def print_test_results(results, title="test"):
     )
 
     print(row_format.format(*headers))
-    print("-" * 50)
+    print("-" * 60)
 
     table_data = []
 

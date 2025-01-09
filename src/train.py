@@ -44,7 +44,7 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
         "learning_rate": [],
         "test_accuracy": [],
         "test_loss": [],
-        "epoch_count": [],
+        "epoch_count": epochs,
         "elapsed_time": 0,
     }
 
@@ -105,6 +105,7 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
                 save_model(model, f"{model.__class__.__name__}_best.pth")
                 total_elapsed_time = time.time() - total_start_time
                 results["elapsed_time"] = total_elapsed_time
+                results["epoch_count"] = epoch
                 print(f"Early stopping triggered after epoch {epoch}.")
                 break
 
