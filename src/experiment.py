@@ -16,7 +16,7 @@ from torch import optim, nn
 from src.config import train_config
 from src.model import get_model
 from src.train import train, load_emnist_data
-from src.visualise import plot_results, print_results_table, save_results_to_csv, plot_bar_chart, plot_metric_vs_epochs
+from src.visualise import plot_results, print_results_table, save_results_to_csv, plot_bar_chart, plot_metric_vs_epochs, print_test_results
 
 
 def epoch_test(architecture, device, loaders, criterion, epochs):
