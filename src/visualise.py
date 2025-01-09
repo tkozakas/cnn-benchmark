@@ -152,10 +152,8 @@ def print_results_table(results):
         "{:<5}  "  # Epoch
         "{:<10} "  # Train Loss
         "{:<10} "  # Train Acc
-        "{:<10} "  # Train Prec
         "{:<10} "  # Val Loss
         "{:<10} "  # Val Acc
-        "{:<10}"  # Val Prec
     )
 
     print(row_format.format(*headers))

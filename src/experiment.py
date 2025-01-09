@@ -252,17 +252,17 @@ def configure_test():
 def main(architecture):
     test_epochs = 2
     device, loaders, criterion = configure_test()
-    # print(f"\n--- Testing {architecture} model ---")
-    # epoch_test(architecture, device, loaders, criterion, test_epochs)
+    print(f"\n--- Testing {architecture} model ---")
+    epoch_test(architecture, device, loaders, criterion, test_epochs)
 
     print("\n--- Testing different learning rates ---")
     learning_rate_test(architecture, device, loaders, criterion, test_epochs)
 
-    # print("\n--- Testing different batch sizes ---")
-    # batch_size_test(architecture, device, criterion, test_epochs)
+    print("\n--- Testing different batch sizes ---")
+    batch_size_test(architecture, device, criterion, test_epochs)
 
-    # print("\n--- Testing different configurations for training ---")
-    # configuration_test(architecture, device, criterion, test_epochs)
+    print("\n--- Testing different configurations for training ---")
+    configuration_test(architecture, device, criterion, test_epochs)
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
