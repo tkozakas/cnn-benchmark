@@ -110,7 +110,7 @@ def batch_size_test(architecture, device, criterion, epochs):
         speed_results.keys(),
         speed_results.values(),
         color='skyblue',
-        width=0.5
+        width=0.05
     )
     axs[1].set_xticks(batch_sizes)
     axs[1].set_title("Training Speed for Different Batch Sizes")
