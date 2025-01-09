@@ -97,10 +97,6 @@ def configuration_test(architecture, device, criterion, epochs):
         {"learning_rate": 0.001, "train_batch_size": 32},
         {"learning_rate": 0.01, "train_batch_size": 32},
         {"learning_rate": 0.1, "train_batch_size": 32},
-        {"learning_rate": 0.0001, "train_batch_size": 64},
-        {"learning_rate": 0.001, "train_batch_size": 64},
-        {"learning_rate": 0.01, "train_batch_size": 64},
-        {"learning_rate": 0.1, "train_batch_size": 64},
     ]
 
     results = {}
