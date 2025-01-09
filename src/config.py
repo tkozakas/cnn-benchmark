@@ -1,13 +1,13 @@
 train_config = {
     'emnist_type': 'balanced', # ! Need to change number of classes in model_config if changing this
-    'subsample_size': 10000,
+    'subsample_size': None,
     'epochs': 10,
     'valid_interval': 10,
     'save_interval': 20,
     'show_interval': 10,
     'train_batch_size': 64,
     'eval_batch_size': 128,
-    'learning_rate': 0.0005,
+    'learning_rate': 0.001,
     'cpu_workers': 6
 }
 
