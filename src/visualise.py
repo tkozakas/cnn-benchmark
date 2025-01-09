@@ -153,7 +153,7 @@ def print_results_table(results):
         "{:<10} "  # Train Loss
         "{:<10} "  # Train Acc
         "{:<10} "  # Val Loss
-        "{:<10} "  # Val Acc
+        "{:<10}"   # Val Acc
     )
 
     print(row_format.format(*headers))
@@ -164,11 +164,12 @@ def print_results_table(results):
             row_format.format(
                 epoch_idx + 1,
                 f"{results['train_loss'][epoch_idx]:.4f}",
-                f"{results['train_accuracy'][epoch_idx]:.4f}"
+                f"{results['train_accuracy'][epoch_idx]:.4f}",
                 f"{results['val_loss'][epoch_idx]:.4f}",
                 f"{results['val_accuracy'][epoch_idx]:.4f}"
             )
         )
+
 
 
 def save_results_to_csv(file_name, results, additional_fields=None):
