@@ -28,7 +28,6 @@ transform = transforms.Compose([
 ])
 
 def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, early_stopping_patience=10):
-
     train_loader = loaders["train"]
     val_loader = loaders["validation"]
     test_loader = loaders["test"]
@@ -85,7 +84,7 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
         results["train_accuracy"].append(epoch_acc)
 
         # Validation phase
-        val_loss, val_acc = evaluate(architecture, model, val_loader, criterion, device)
+        val_loss, val_acc = evaluate(model, val_loader, criterion, device)
         results["val_loss"].append(val_loss)
         results["val_accuracy"].append(val_acc)
 
@@ -116,7 +115,7 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
         if epoch % train_config["save_interval"] == 0:
             save_model(model, f"{model.__class__.__name__}_epoch_{epoch}.pth")
 
-    test_loss, test_acc = evaluate(architecture, model, test_loader, criterion, device)
+    test_loss, test_acc = evaluate(model, test_loader, criterion, device)
     print(f"Test Loss: {test_loss:.4f} | Test Accuracy: {test_acc:.4f}")
     results["test_loss"] = test_loss
     results["test_accuracy"] = test_acc
@@ -128,14 +127,11 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
 
     return results
 
-def evaluate(architecture, model, loader, criterion, device):
+def evaluate(model, loader, criterion, device):
     model.eval()
     running_loss = 0.0
     correct = 0
     total = 0
-
-    precision_metric = MulticlassPrecision(num_classes=model_config[architecture]["num_classes"])
-    precision_metric.reset()
 
     with torch.no_grad():
         for images, labels in loader:
@@ -148,8 +144,6 @@ def evaluate(architecture, model, loader, criterion, device):
 
             correct += (predictions == labels).sum().item()
             total += images.size(0)
-
-            precision_metric.update(predictions, labels)
 
     loss = running_loss / total
     accuracy = correct / total
