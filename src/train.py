@@ -85,7 +85,7 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
         results["train_accuracy"].append(epoch_acc)
 
         # Validation phase
-        val_loss, val_acc = evaluate(model, val_loader, criterion, device)
+        val_loss, val_acc = evaluate(architecture, model, val_loader, criterion, device)
         results["val_loss"].append(val_loss)
         results["val_accuracy"].append(val_acc)
 
