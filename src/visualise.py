@@ -102,7 +102,7 @@ def plot_results(results):
     show_performance_curve(results, train_key="train_loss", val_key="val_loss", metric_label="Loss")
 
 
-def plot_model_diffs(results):
+def plot_model_diffs(results, dataset_name):
     plt.figure(figsize=(10, 6))
 
     for architecture, data in results.items():
@@ -110,7 +110,7 @@ def plot_model_diffs(results):
         epochs_range = range(1, len(val_accuracy) + 1)
         plt.plot(epochs_range, val_accuracy, label=architecture)
 
-    plt.title("Validation Accuracy vs. Epochs for Different Architectures")
+    plt.title(f"Validation Accuracy vs. Epochs for Different Architectures on {dataset_name} Dataset")
     plt.xlabel("Epochs")
     plt.ylabel("Validation Accuracy")
     plt.legend(title="Architecture")

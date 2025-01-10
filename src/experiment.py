@@ -249,25 +249,56 @@ def configure_test():
     criterion = nn.CrossEntropyLoss()
     return device, loaders, criterion
 
-
-def model_config_test(device, loaders, criterion, epochs):
+def model_config_test(device, criterion, epochs):
     architectures = ["EmnistCNN_16_64_128", "EmnistCNN_32_128_256", "EmnistCNN_8_32_64"]
+    datasets = ["letters", "balanced", "digits"]
     results = {}
 
-    for architecture in architectures:
-        print(f"\nTesting model: {architecture}")
-        model = get_model(architecture).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
-        model_results = train(model, loaders, criterion, optimizer, device, epochs)
+    for dataset in datasets:
+        print(f"\nTesting dataset: {dataset}")
+        loaders = load_emnist_data(
+            dataset,
+            train_config["train_batch_size"],
+            train_config["subsample_size"],
+            train_config["cpu_workers"]
+        )
 
-        results[architecture] = model_results
-        save_results_to_csv(f"model_{architecture}_results.csv", model_results, {"Model": architecture})
+        for architecture in architectures:
+            print(f"\nTesting model: {architecture} on {dataset}")
+            model = get_model(architecture).to(device)
+            optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
+            model_results = train(model, loaders, criterion, optimizer, device, epochs)
 
-    print_test_results(results, title="model")
-    plot_model_diffs(results)
+            results[f"{dataset}_{architecture}"] = model_results
+            save_results_to_csv(f"model_{dataset}_{architecture}_results.csv", model_results, {
+                "Dataset": dataset,
+                "Model": architecture
+            })
+
+    headers = ["Dataset", "Model", "Test Loss", "Test Accuracy", "Time", "Epochs"]
+    row_format = "{:<15} {:<20} {:<10} {:<10} {:<10} {:<10}"
+    print("\nResults Table:")
+    print(row_format.format(*headers))
+    print("-" * 75)
+
+    for key, result in results.items():
+        dataset, architecture = key.split("_", 1)
+        test_loss = result["test_loss"]
+        test_accuracy = result["test_accuracy"]
+        epochs = result["epoch_count"]
+        elapsed_time = result["elapsed_time"]
+        print(row_format.format(dataset, architecture, f"{test_loss:.4f}", f"{test_accuracy:.4f}", f"{elapsed_time:.2f}", epochs))
+
+
+    for dataset in datasets:
+        dataset_results = {arch: results[f"{dataset}_{arch}"] for arch in architectures}
+
+        print(f"\nPlotting Validation Accuracy for {dataset} Dataset")
+        plot_model_diffs(dataset_results, dataset_name=dataset)
+
 
 def main(architecture):
-    test_epochs = 10
+    test_epochs = 50
     device, loaders, criterion = configure_test()
     # print(f"\n--- Testing {architecture} model ---")
     # epoch_test(architecture, device, loaders, criterion, test_epochs)
@@ -282,7 +313,7 @@ def main(architecture):
     # configuration_test(architecture, device, criterion, test_epochs)
 
     print("\n--- Testing different model configurations ---")
-    model_config_test(device, loaders, criterion, test_epochs)
+    model_config_test(device, criterion, test_epochs)
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)

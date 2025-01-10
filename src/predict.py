@@ -30,6 +30,7 @@ from src.model import get_model
 transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=3),
     transforms.Resize((28, 28)),
+    transforms.RandomRotation(15),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
@@ -99,8 +100,38 @@ def process_and_predict_image(model, image, device):
 
     return predictions
 
-def load_dataset(emnist_type):
-    return datasets.EMNIST(root="../data", split=emnist_type, train=True, download=True, transform=transform)
+
+def load_dataset(emnist_type, preview_images=10):
+    simple_transform = transforms.ToTensor()
+    dataset = datasets.EMNIST(root="../data", split=emnist_type, train=True, download=True, transform=simple_transform)
+    samples = [dataset[random.randint(0, len(dataset) - 1)] for _ in range(preview_images)]
+    original_images = [sample[0] for sample in samples]
+    labels = [sample[1] for sample in samples]
+    original_pil_images = [F.to_pil_image(image) for image in original_images]
+    preprocessed_images = [preprocess_image(image) for image in original_pil_images]
+
+    plt.figure(figsize=(15, 6))
+    for i, (image, label) in enumerate(zip(original_images, labels)):
+        plt.subplot(1, preview_images, i + 1)
+        plt.imshow(image.permute(1, 2, 0).squeeze(), cmap="gray")
+        plt.title(f"Label: {label}")
+        plt.axis("off")
+    plt.suptitle("Original Images with Labels", fontsize=16)
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(15, 6))
+    for i, (image, label) in enumerate(zip(preprocessed_images, labels)):
+        plt.subplot(1, preview_images, i + 1)
+        plt.imshow(image.permute(1, 2, 0).squeeze(), cmap="gray")
+        plt.title(f"Label: {label}")
+        plt.axis("off")
+    plt.suptitle("Preprocessed Images with Labels", fontsize=16)
+    plt.tight_layout()
+    plt.show()
+
+    processed_dataset = datasets.EMNIST(root="../data", split=emnist_type, train=True, download=True, transform=transform)
+    return processed_dataset
 
 
 def predict_from_dataset(model, dataset, device, num_images=20, cols=5):
