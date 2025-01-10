@@ -1,7 +1,7 @@
 train_config = {
     'emnist_type': 'digits', # ! Need to change number of classes in model_config if changing this
     'subsample_size': None,
-    'epochs': 50,
+    'epochs': 2,
     'valid_interval': 10,
     'save_interval': 20,
     'show_interval': 10,

@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader, random_split
 from torchmetrics.classification import MulticlassPrecision
 from torchvision import datasets, transforms
 
-from src.config import train_config
+from src.config import train_config, model_config
 from src.model import save_model, get_model
 from src.visualise import plot_results, plot_confusion_matrix
 
@@ -26,9 +26,6 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
-
-NUM_CLASSES = 47
-
 
 def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, early_stopping_patience=10):
 
@@ -119,7 +116,7 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
         if epoch % train_config["save_interval"] == 0:
             save_model(model, f"{model.__class__.__name__}_epoch_{epoch}.pth")
 
-    test_loss, test_acc = evaluate(model, test_loader, criterion, device)
+    test_loss, test_acc = evaluate(architecture, model, test_loader, criterion, device)
     print(f"Test Loss: {test_loss:.4f} | Test Accuracy: {test_acc:.4f}")
     results["test_loss"] = test_loss
     results["test_accuracy"] = test_acc
@@ -131,13 +128,13 @@ def train(model, loaders, criterion, optimizer, device, epochs, scheduler=None, 
 
     return results
 
-def evaluate(model, loader, criterion, device):
+def evaluate(architecture, model, loader, criterion, device):
     model.eval()
     running_loss = 0.0
     correct = 0
     total = 0
 
-    precision_metric = MulticlassPrecision(num_classes=NUM_CLASSES).to(device)
+    precision_metric = MulticlassPrecision(num_classes=model_config[architecture]["num_classes"])
     precision_metric.reset()
 
     with torch.no_grad():
@@ -192,7 +189,7 @@ def main(architecture):
         model=model,
         loader=loaders["test"],
         device=device,
-        classes=list(range(NUM_CLASSES))
+        classes=list(range(model_config[architecture]["num_classes"]))
     )
 
 def configure_training(architecture):
