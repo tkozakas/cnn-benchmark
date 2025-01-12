@@ -56,6 +56,7 @@ def plot_confusion_matrix(model, loader, device, classes):
     all_labels = []
 
     model.eval()
+    model.to(device)
     with torch.no_grad():
         for images, labels in loader:
             images = images.to(device)
@@ -98,9 +99,18 @@ def plot_bar_chart(ax, x_values, heights, title, xlabel, ylabel, bar_width=0.5):
     ax.grid(axis='y', linestyle='--', alpha=0.7)
 
 def plot_results(results):
-    show_performance_curve(results, train_key="train_accuracy", val_key="val_accuracy", metric_label="Accuracy")
-    show_performance_curve(results, train_key="train_loss", val_key="val_loss", metric_label="Loss")
-
+    show_performance_curve(
+        results,
+        train_key="train_accuracy",
+        val_key="val_accuracy",
+        metric_label="Accuracy"
+    )
+    show_performance_curve(
+        results,
+        train_key="train_loss",
+        val_key="val_loss",
+        metric_label="Loss"
+    )
 
 def plot_model_diffs(results, dataset_name):
     plt.figure(figsize=(10, 6))

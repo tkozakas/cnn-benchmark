@@ -89,3 +89,11 @@ def save_model(model, path):
     full_path = trained_dir / Path(path).name
     torch.save(model.state_dict(), full_path)
     print(f"Model saved to {full_path}")
+
+def load_model(model, path):
+    project_root = Path(__file__).parent.parent.resolve()
+    trained_dir = project_root / "trained"
+    full_path = trained_dir / Path(path).name
+    model.load_state_dict(torch.load(full_path))
+    print(f"Model loaded from {full_path}")
+    return model

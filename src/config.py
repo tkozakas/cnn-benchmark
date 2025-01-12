@@ -1,7 +1,9 @@
 train_config = {
-    'emnist_type': 'digits', # ! Need to change number of classes in model_config if changing this
-    'subsample_size': None,
-    'epochs': 2,
+    'emnist_type': 'balanced', # ! Need to change number of classes in model_config if changing this
+    'subsample_size': 10000,
+    'epochs': 5,
+    'val_split': 0.2,
+    'k_folds': 5,
     'valid_interval': 10,
     'save_interval': 20,
     'show_interval': 10,
