@@ -18,6 +18,7 @@ from src.train import k_fold_cross_validation, transform
 from src.visualise import plot_bar_chart
 
 
+
 def train_configuration_test(architecture, dataset, epochs, k_folds, batch_sizes, learning_rates):
     configurations = [
         {"learning_rate": lr, "train_batch_size": bs}
@@ -50,8 +51,11 @@ def train_configuration_test(architecture, dataset, epochs, k_folds, batch_sizes
 
         train_times.append(avg_results["elapsed_time"])
 
-        val_acc = avg_results["val_accuracy"]
-        val_loss = avg_results["val_loss"]
+        val_acc = [fold_result["val_accuracy"] for fold_result in all_results]
+        val_loss = [fold_result["val_loss"] for fold_result in all_results]
+
+        val_acc = list(map(lambda x: sum(x) / len(x), zip(*val_acc)))
+        val_loss = list(map(lambda x: sum(x) / len(x), zip(*val_loss)))
 
         all_val_accuracies[config_key] = val_acc
         all_val_losses[config_key] = val_loss
@@ -133,8 +137,11 @@ def model_config_test(datasets, epochs, k_folds, batch_size, learning_rate):
 
             dataset_train_times.append(avg_results["elapsed_time"])
 
-            val_acc = avg_results["val_accuracy"]
-            val_loss = avg_results["val_loss"]
+            val_acc = [fold_result["val_accuracy"] for fold_result in all_results]
+            val_loss = [fold_result["val_loss"] for fold_result in all_results]
+
+            val_acc = list(map(lambda x: sum(x) / len(x), zip(*val_acc)))
+            val_loss = list(map(lambda x: sum(x) / len(x), zip(*val_loss)))
 
             all_val_accuracies[architecture] = val_acc
             all_val_losses[architecture] = val_loss
@@ -185,7 +192,7 @@ def model_config_test(datasets, epochs, k_folds, batch_size, learning_rate):
 
 
 def main(architecture):
-    test_epochs = 3
+    test_epochs = 50
 
     print("\n--- Testing different configurations for training ---")
     train_configuration_test(
