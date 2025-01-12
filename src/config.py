@@ -3,7 +3,7 @@ train_config = {
     'subsample_size': 10000,
     'epochs': 5,
     'val_split': 0.2,
-    'k_folds': 5,
+    'k_folds': 3,
     'valid_interval': 10,
     'save_interval': 20,
     'show_interval': 10,

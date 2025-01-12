@@ -17,8 +17,8 @@ from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
 from src.config import train_config, model_config
-from src.model import save_model, get_model, load_model
-from src.visualise import plot_confusion_matrix, plot_results
+from src.model import save_model, get_model
+from src.visualise import plot_confusion_matrix, plot_aggregated_learning_curves
 
 transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=3),
@@ -29,7 +29,7 @@ transform = transforms.Compose([
 ])
 
 
-def k_fold_cross_validation(architecture, dataset, model_fn, k_folds, epochs, batch_size, random_state=42):
+def k_fold_cross_validation(architecture, dataset, model_fn, k_folds, epochs, batch_size, learning_rate, random_state=42):
     global model, test_loader
     kfold = KFold(n_splits=k_folds, shuffle=True, random_state=random_state)
     all_results = []
@@ -52,7 +52,7 @@ def k_fold_cross_validation(architecture, dataset, model_fn, k_folds, epochs, ba
         model = model_fn().to("cuda" if torch.cuda.is_available() else "cpu")
 
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
         results = {
             "train_loss": [],
@@ -94,6 +94,7 @@ def k_fold_cross_validation(architecture, dataset, model_fn, k_folds, epochs, ba
         "test_loss": np.mean([r["test_loss"] for r in all_results]),
         "test_accuracy": np.mean([r["test_accuracy"] for r in all_results]),
         "elapsed_time": np.mean([r["elapsed_time"] for r in all_results]),
+        "epoch_count": np.mean([r["epoch_count"] for r in all_results]),
     }
 
     print("\nFinal Aggregated Results:")
@@ -103,19 +104,10 @@ def k_fold_cross_validation(architecture, dataset, model_fn, k_folds, epochs, ba
     print(f"Validation Accuracy: {avg_results['val_accuracy']:.4f}")
     print(f"Test Loss: {avg_results['test_loss']:.4f}")
     print(f"Test Accuracy: {avg_results['test_accuracy']:.4f}")
+    print(f"Average Epochs per Fold: {avg_results['epoch_count']:.2f}")
     print(f"Average Elapsed Time per Fold: {avg_results['elapsed_time']:.2f} seconds")
 
-    plot_results(all_results)
-    plot_confusion_matrix(
-        model=model,
-        loader=test_loader,
-        device="cuda" if torch.cuda.is_available() else "cpu",
-        classes=list(range(model_config[architecture]["num_classes"]))
-    )
-
     return all_results, avg_results
-
-
 
 def train(model, architecture, loaders, criterion, optimizer, device, epochs, scheduler=None, early_stopping_patience=10):
     train_loader = loaders["train"]
@@ -223,7 +215,19 @@ def main(architecture):
         model_fn=model_fn,
         k_folds=train_config["k_folds"],
         epochs=train_config["epochs"],
-        batch_size=train_config["train_batch_size"]
+        batch_size=train_config["train_batch_size"],
+        learning_rate=train_config["learning_rate"]
+    )
+
+    print("\nPlotting Aggregated Learning Curves...")
+    plot_aggregated_learning_curves(all_results, "Accuracy", "train_accuracy", "val_accuracy")
+    plot_aggregated_learning_curves(all_results, "Loss", "train_loss", "val_loss")
+
+    plot_confusion_matrix(
+        model=model,
+        loader=test_loader,
+        device="cuda" if torch.cuda.is_available() else "cpu",
+        classes=list(range(model_config[architecture]["num_classes"]))
     )
 
 if __name__ == "__main__":

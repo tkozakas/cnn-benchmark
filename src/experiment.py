@@ -7,313 +7,243 @@ Options:
 """
 
 import matplotlib.pyplot as plt
+import pandas as pd
 import torch
 from docopt import docopt
-from torch import optim, nn
+from torchvision import datasets
 
 from src.config import train_config
 from src.model import get_model
-from src.train import train, load_emnist_data
-from src.visualise import plot_results, print_results_table, save_results_to_csv, plot_bar_chart, plot_metric_vs_epochs, print_test_results, \
-    plot_model_diffs
+from src.train import k_fold_cross_validation, transform
+from src.visualise import plot_bar_chart
 
 
-def epoch_test(architecture, device, loaders, criterion, epochs):
-    model = get_model(architecture).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
-    results = train(model, loaders, criterion, optimizer, device, epochs)
+def train_configuration_test(architecture, dataset, epochs, k_folds, batch_sizes, learning_rates):
+    configurations = [
+        {"learning_rate": lr, "train_batch_size": bs}
+        for lr in learning_rates
+        for bs in batch_sizes
+    ]
 
-    save_results_to_csv(f"epoch_test_results.csv", results)
+    results = []
+    train_times = []
 
-    plot_results(results=results)
-    print_results_table(results)
+    all_val_accuracies = {}
+    all_val_losses = {}
 
-
-def learning_rate_test(architecture, device, loaders, criterion, epochs):
-    learning_rates = [0.0001, 0.001, 0.01, 0.1]
-    results = {}
-
-    for lr in learning_rates:
-        print(f"\nTesting learning rate: {lr}")
-        model = get_model(architecture).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=lr)
-
-        lr_results = train(model, loaders, criterion, optimizer, device, epochs)
-
-        results[lr] = lr_results
-        save_results_to_csv(f"learning_rate_{lr}_results.csv", lr_results, {"Learning Rate": lr})
-
-    batch_times = [results[lr]['elapsed_time'] for lr in learning_rates]
-
-    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-
-    for lr in learning_rates:
-        train_accuracy = results[lr]['val_accuracy']
-        train_loss = results[lr]['val_loss']
-        epochs_range = range(1, len(train_accuracy) + 1)
-
-        plot_metric_vs_epochs(
-            axs[0, 0],
-            epochs_range,
-            train_accuracy,
-            label=f"LR={lr}",
-            title="Validation Accuracy vs. Epochs for Learning Rates",
-            xlabel="Epochs",
-            ylabel="Validation Accuracy"
+    for config in configurations:
+        print(f"\n--- Testing Configuration: LR={config['learning_rate']}, Batch Size={config['train_batch_size']} ---")
+        all_results, avg_results = k_fold_cross_validation(
+            architecture=architecture,
+            dataset=dataset,
+            model_fn=lambda: get_model(architecture),
+            k_folds=k_folds,
+            epochs=epochs,
+            learning_rate=config["learning_rate"],
+            batch_size=config["train_batch_size"],
+            random_state=42,
         )
 
-        plot_metric_vs_epochs(
-            axs[0, 1],
-            epochs_range,
-            train_loss,
-            label=f"LR={lr}",
-            title="Validation Loss vs. Epochs for Learning Rates",
-            xlabel="Epochs",
-            ylabel="Validation Loss"
-        )
+        config_key = f"LR={config['learning_rate']}, BS={config['train_batch_size']}"
+        avg_results["Configuration"] = config_key
+        results.append(avg_results)
 
-    plot_bar_chart(
-        axs[1, 0],
-        [str(lr) for lr in learning_rates],
-        batch_times,
-        title="Training Speed for Different Learning Rates",
-        xlabel="Learning Rate",
-        ylabel="Training Time (seconds)"
-    )
+        train_times.append(avg_results["elapsed_time"])
 
-    print_test_results(results, title="learning_rate")
+        val_acc = avg_results["val_accuracy"]
+        val_loss = avg_results["val_loss"]
 
-    axs[1, 1].axis('off')
+        all_val_accuracies[config_key] = val_acc
+        all_val_losses[config_key] = val_loss
+
+    plt.figure(figsize=(10, 6))
+    for config_key, val_acc in all_val_accuracies.items():
+        actual_epochs = len(val_acc)
+        epochs_range = range(1, actual_epochs + 1)
+        plt.plot(epochs_range, val_acc, label=config_key)
+    plt.title("Validation Accuracy Across Configurations")
+    plt.xlabel("Epochs")
+    plt.ylabel("Validation Accuracy")
+    plt.legend(loc="upper left", bbox_to_anchor=(1.05, 1), title="Configurations")
+    plt.grid(True)
     plt.tight_layout()
     plt.show()
 
-
-def configuration_test(architecture, device, criterion, epochs):
-    configurations = [
-        {"learning_rate": 0.001, "train_batch_size": 16},
-        {"learning_rate": 0.01, "train_batch_size": 16},
-        {"learning_rate": 0.001, "train_batch_size": 64},
-        {"learning_rate": 0.01, "train_batch_size": 64},
-        {"learning_rate": 0.001, "train_batch_size": 128},
-        {"learning_rate": 0.01, "train_batch_size": 128},
-    ]
-
-    results = {}
-
-    for config in configurations:
-        print(f"\nTesting configuration: {config}")
-        model = get_model(architecture).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])
-
-        loaders = load_emnist_data(
-            train_config["emnist_type"],
-            config["train_batch_size"],
-            train_config["subsample_size"],
-            train_config["cpu_workers"]
-        )
-        config_results = train(model, loaders, criterion, optimizer, device, epochs)
-
-        config_key = str(config)
-        results[config_key] = config_results
-
-        save_results_to_csv(f"config_{config_key}_results.csv", config_results, {"Configuration": config_key})
+    plt.figure(figsize=(10, 6))
+    for config_key, val_loss in all_val_losses.items():
+        actual_epochs = len(val_loss)
+        epochs_range = range(1, actual_epochs + 1)
+        plt.plot(epochs_range, val_loss, label=config_key)
+    plt.title("Validation Loss Across Configurations")
+    plt.xlabel("Epochs")
+    plt.ylabel("Validation Loss")
+    plt.legend(loc="upper left", bbox_to_anchor=(1.05, 1), title="Configurations")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
     config_labels = [f"LR={config['learning_rate']}, BS={config['train_batch_size']}" for config in configurations]
-    batch_times = [results[str(config)]['elapsed_time'] for config in configurations]
-
-    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-
-    for config, label in zip(configurations, config_labels):
-        config_key = str(config)
-        train_accuracy = results[config_key]['val_accuracy']
-        train_loss = results[config_key]['val_loss']
-        epochs_range = range(1, len(train_accuracy) + 1)
-
-        plot_metric_vs_epochs(
-            axs[0, 0],
-            epochs_range,
-            train_accuracy,
-            label=label,
-            title="Validation Accuracy vs. Epochs for Configurations",
-            xlabel="Epochs",
-            ylabel="Validation Accuracy"
-        )
-
-        plot_metric_vs_epochs(
-            axs[0, 1],
-            epochs_range,
-            train_loss,
-            label=label,
-            title="Validation Loss vs. Epochs for Configurations",
-            xlabel="Epochs",
-            ylabel="Validation Loss"
-        )
-
-    # Plot bar chart for training times
+    plt.figure(figsize=(10, 6))
     plot_bar_chart(
-        axs[1, 0],
-        config_labels,
-        batch_times,
-        title="Training Speed for Different Configurations",
+        plt.gca(),
+        x_values=config_labels,
+        heights=train_times,
+        title="Training Time for Configurations",
         xlabel="Configuration (LR, BS)",
         ylabel="Training Time (seconds)"
     )
-
-    print_test_results(results, title="configuration")
-
-    axs[1, 1].axis('off')
     plt.tight_layout()
     plt.show()
 
+    results_df = pd.DataFrame(results)
+    results_file = "../test_data/all_configuration_results.csv"
+    results_df.to_csv(results_file, index=False)
+    print(f"Results saved to {results_file}")
 
-def batch_size_test(architecture, device, criterion, epochs):
-    batch_sizes = [16, 32, 64, 128, 256]
-    results = {}
+    return results
 
-    for batch_size in batch_sizes:
-        print(f"\nTesting batch size: {batch_size}")
-        loaders = load_emnist_data(
-            train_config["emnist_type"],
-            batch_size,
-            train_config["subsample_size"],
-            train_config["cpu_workers"]
+
+def model_config_test(datasets, epochs, k_folds, batch_size, learning_rate):
+    model_architectures = ["EmnistCNN_16_64_128", "EmnistCNN_32_128_256", "EmnistCNN_8_32_64"]
+    results = []
+
+    for dataset_name, dataset in datasets.items():
+        print(f"\n--- Dataset: {dataset_name} ---")
+
+        all_val_accuracies = {}
+        all_val_losses = {}
+        dataset_train_times = []
+
+        for architecture in model_architectures:
+            print(f"\n--- Testing Model: {architecture} on {dataset_name} ---")
+            all_results, avg_results = k_fold_cross_validation(
+                architecture=architecture,
+                dataset=dataset,
+                model_fn=lambda: get_model(architecture),
+                k_folds=k_folds,
+                epochs=epochs,
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                random_state=42,
+            )
+
+            avg_results["Architecture"] = architecture
+            avg_results["Dataset"] = dataset_name
+            results.append(avg_results)
+
+            dataset_train_times.append(avg_results["elapsed_time"])
+
+            val_acc = avg_results["val_accuracy"]
+            val_loss = avg_results["val_loss"]
+
+            all_val_accuracies[architecture] = val_acc
+            all_val_losses[architecture] = val_loss
+
+        plt.figure(figsize=(10, 6))
+        for architecture, val_acc in all_val_accuracies.items():
+            actual_epochs = len(val_acc)
+            epochs_range = range(1, actual_epochs + 1)
+            plt.plot(epochs_range, val_acc, label=architecture)
+        plt.title(f"Validation Accuracy Across Models on {dataset_name}")
+        plt.xlabel("Epochs")
+        plt.ylabel("Validation Accuracy")
+        plt.legend(loc="upper left", bbox_to_anchor=(1.05, 1), title="Models")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+
+        plt.figure(figsize=(10, 6))
+        for architecture, val_loss in all_val_losses.items():
+            actual_epochs = len(val_loss)
+            epochs_range = range(1, actual_epochs + 1)
+            plt.plot(epochs_range, val_loss, label=architecture)
+        plt.title(f"Validation Loss Across Models on {dataset_name}")
+        plt.xlabel("Epochs")
+        plt.ylabel("Validation Loss")
+        plt.legend(loc="upper left", bbox_to_anchor=(1.05, 1), title="Models")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+
+        plt.figure(figsize=(10, 6))
+        plot_bar_chart(
+            plt.gca(),
+            x_values=model_architectures,
+            heights=dataset_train_times,
+            title=f"Training Time for Models on {dataset_name}",
+            xlabel="Model Architecture",
+            ylabel="Training Time (seconds)"
         )
+        plt.tight_layout()
+        plt.show()
 
-        model = get_model(architecture).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
-        batch_results = train(model, loaders, criterion, optimizer, device, epochs)
-
-        results[batch_size] = batch_results
-        save_results_to_csv(f"batch_size_{batch_size}_results.csv", batch_results, {"Batch Size": batch_size})
-
-    batch_times = [results[batch_size]['elapsed_time'] for batch_size in batch_sizes]
-
-    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-
-    for batch_size in batch_sizes:
-        train_accuracy = results[batch_size]['val_accuracy']
-        train_loss = results[batch_size]['val_loss']
-        epochs_range = range(1, len(train_accuracy) + 1)
-
-        plot_metric_vs_epochs(
-            axs[0, 0],
-            epochs_range,
-            train_accuracy,
-            label=f"Batch={batch_size}",
-            title="Validation Accuracy vs. Epochs for Batch Sizes",
-            xlabel="Epochs",
-            ylabel="Validation Accuracy"
-        )
-
-        plot_metric_vs_epochs(
-            axs[0, 1],
-            epochs_range,
-            train_loss,
-            label=f"Batch={batch_size}",
-            title="Validation Loss vs. Epochs for Batch Sizes",
-            xlabel="Epochs",
-            ylabel="Validation Loss"
-        )
-
-    plot_bar_chart(
-        axs[1, 0],
-        batch_sizes,
-        batch_times,
-        title="Training Speed for Different Batch Sizes",
-        xlabel="Batch Size",
-        ylabel="Training Time (seconds)",
-        bar_width=6
-    )
-
-    print_test_results(results, title="batch_size")
-
-    # Hide unused subplot
-    axs[1, 1].axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-
-
-def configure_test():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}")
-    print(f"Using {torch.cuda.device_count()} GPU(s)")
-
-    loaders = load_emnist_data(
-        train_config["emnist_type"],
-        train_config["train_batch_size"],
-        train_config["subsample_size"],
-        train_config["cpu_workers"]
-    )
-    criterion = nn.CrossEntropyLoss()
-    return device, loaders, criterion
-
-def model_config_test(device, criterion, epochs):
-    architectures = ["EmnistCNN_16_64_128", "EmnistCNN_32_128_256", "EmnistCNN_8_32_64"]
-    datasets = ["letters", "balanced", "digits"]
-    results = {}
-
-    for dataset in datasets:
-        print(f"\nTesting dataset: {dataset}")
-        loaders = load_emnist_data(
-            dataset,
-            train_config["train_batch_size"],
-            train_config["subsample_size"],
-            train_config["cpu_workers"]
-        )
-
-        for architecture in architectures:
-            print(f"\nTesting model: {architecture} on {dataset}")
-            model = get_model(architecture).to(device)
-            optimizer = optim.Adam(model.parameters(), lr=train_config["learning_rate"])
-            model_results = train(model, loaders, criterion, optimizer, device, epochs)
-
-            results[f"{dataset}_{architecture}"] = model_results
-            save_results_to_csv(f"model_{dataset}_{architecture}_results.csv", model_results, {
-                "Dataset": dataset,
-                "Model": architecture
-            })
-
-    headers = ["Dataset", "Model", "Test Loss", "Test Accuracy", "Time", "Epochs"]
-    row_format = "{:<15} {:<20} {:<10} {:<10} {:<10} {:<10}"
-    print("\nResults Table:")
-    print(row_format.format(*headers))
-    print("-" * 75)
-
-    for key, result in results.items():
-        dataset, architecture = key.split("_", 1)
-        test_loss = result["test_loss"]
-        test_accuracy = result["test_accuracy"]
-        epochs = result["epoch_count"]
-        elapsed_time = result["elapsed_time"]
-        print(row_format.format(dataset, architecture, f"{test_loss:.4f}", f"{test_accuracy:.4f}", f"{elapsed_time:.2f}", epochs))
-
-
-    for dataset in datasets:
-        dataset_results = {arch: results[f"{dataset}_{arch}"] for arch in architectures}
-
-        print(f"\nPlotting Validation Accuracy for {dataset} Dataset")
-        plot_model_diffs(dataset_results, dataset_name=dataset)
+    results_df = pd.DataFrame(results)
+    results_file = "../test_data/all_model_config_results.csv"
+    results_df.to_csv(results_file, index=False)
+    print(f"Results saved to {results_file}")
+    return results
 
 
 def main(architecture):
-    test_epochs = 50
-    device, loaders, criterion = configure_test()
-    # print(f"\n--- Testing {architecture} model ---")
-    # epoch_test(architecture, device, loaders, criterion, test_epochs)
+    test_epochs = 3
 
-    # print("\n--- Testing different learning rates ---")
-    # learning_rate_test(architecture, device, loaders, criterion, test_epochs)
-
-    # print("\n--- Testing different batch sizes ---")
-    # batch_size_test(architecture, device, criterion, test_epochs)
-
-    # print("\n--- Testing different configurations for training ---")
-    # configuration_test(architecture, device, criterion, test_epochs)
+    print("\n--- Testing different configurations for training ---")
+    train_configuration_test(
+        architecture=architecture,
+        dataset=get_subsample(datasets.EMNIST(
+            root="../data",
+            split=train_config["emnist_type"],
+            train=True,
+            download=True,
+            transform=transform
+        )),
+        epochs=test_epochs,
+        k_folds=train_config["k_folds"],
+        batch_sizes=[32, 64, 128],
+        learning_rates=[0.1, 0.01, 0.001, 0.0001]
+    )
 
     print("\n--- Testing different model configurations ---")
-    model_config_test(device, criterion, test_epochs)
+    model_config_test(
+        datasets={
+            "letters": get_subsample(datasets.EMNIST(
+                root="../data",
+                split="letters",
+                train=True,
+                download=True,
+                transform=transform
+            )),
+            "digits": get_subsample(datasets.EMNIST(
+                root="../data",
+                split="digits",
+                train=True,
+                download=True,
+                transform=transform
+            )),
+            "balanced": get_subsample(datasets.EMNIST(
+                root="../data",
+                split="balanced",
+                train=True,
+                download=True,
+                transform=transform
+            ))
+        },
+        epochs=test_epochs,
+        k_folds=train_config["k_folds"],
+        batch_size=train_config["train_batch_size"],
+        learning_rate=train_config["learning_rate"]
+    )
+
+
+def get_subsample(full_dataset):
+    if train_config["subsample_size"]:
+        print(f"Subsampling dataset to {train_config['subsample_size']} samples...")
+        subsample_size = train_config["subsample_size"]
+        full_dataset, _ = torch.utils.data.random_split(
+            full_dataset,
+            [subsample_size, len(full_dataset) - subsample_size]
+        )
+    return full_dataset
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
