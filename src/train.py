@@ -6,18 +6,12 @@ Options:
     -h --help                     Show this help message.
     --architecture=ARCH           Model architecture to use (e.g., EmnistCNN_16_64_128, CRNN) [default: EmnistCNN_16_64_128].
 """
-import time
 
-import numpy as np
-import torch
 from docopt import docopt
-from sklearn.model_selection import KFold
-from torch import nn, optim
-from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
-from src.config import train_config, model_config
-from src.model import save_model, get_model
+from src.config import model_config
+from src.model import get_model
 from src.visualise import plot_confusion_matrix, plot_aggregated_learning_curves
 
 transform = transforms.Compose([
@@ -249,7 +243,6 @@ def main(architecture):
         k_folds=train_config["k_folds"],
         epochs=train_config["epochs"],
         batch_size=train_config["train_batch_size"],
-        optimizer=optim.Adam(model_fn().parameters(), lr=train_config["learning_rate"]),
     )
 
     print("\nPlotting results...")

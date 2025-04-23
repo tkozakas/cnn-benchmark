@@ -1,9 +1,9 @@
 train_config = {
     'emnist_type': 'balanced', # ! Need to change number of classes in model_config if changing this
     'subsample_size': 1000,
-    'epochs': 5,
+    'epochs': 50,
     'val_split': 0.2,
-    'k_folds': 3,
+    'k_folds': 2,
     'valid_interval': 10,
     'save_interval': 20,
     'show_interval': 10,
@@ -61,4 +61,11 @@ model_config = {
         "input_size": 28,
         "num_classes": 47
     },
+    # Existing architectures
+    "GoogleNet": {
+        "num_classes": 47
+    },
+    "ResNet18": {
+        "num_classes": 47
+    }
 }

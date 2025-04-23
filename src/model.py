@@ -71,6 +71,14 @@ class EmnistCNN(nn.Module):
         return x
 
 def get_model(architecture):
+    if architecture == 'GoogleNet':
+        from torchvision.models import googlenet
+        model = googlenet(num_classes=model_config[architecture]['num_classes'], aux_logits=False)
+        return model
+    elif architecture == 'ResNet18':
+        from torchvision.models import resnet18
+        model = resnet18(num_classes=model_config[architecture]['num_classes'])
+        return model
     return EmnistCNN(**model_config[architecture])
 
 def save_model(model, path):

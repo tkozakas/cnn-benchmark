@@ -49,7 +49,8 @@ def plot_metrics(runs, title):
 
 def run_experiment(name, architecture, dataset, **kwargs):
     """
-    Run k-fold CV and return averaged metric curves and train time.
+    Run k-fold CV and return averaged metric curves, train time,
+    plus batch_size and learning_rate if provided.
     """
     folds_data, avg_results = k_fold_cross_validation(
         architecture=architecture,
@@ -57,7 +58,6 @@ def run_experiment(name, architecture, dataset, **kwargs):
         model_fn=lambda arch=architecture: get_model(arch),
         **kwargs
     )
-    # average across folds
     per_fold_train_loss = [f['train_loss'] for f in folds_data]
     per_fold_val_loss   = [f['val_loss']   for f in folds_data]
     per_fold_train_acc  = [f['train_accuracy'] for f in folds_data]
@@ -72,16 +72,16 @@ def run_experiment(name, architecture, dataset, **kwargs):
         'val_loss': avg_val_loss,
         'train_accuracy': avg_train_acc,
         'val_accuracy': avg_val_acc,
-        'time': avg_results.get('avg_time', avg_results.get('elapsed_time'))
+        'time': avg_results.get('avg_time', avg_results.get('elapsed_time')),
+        'batch_size': kwargs.get('batch_size'),
+        'learning_rate': kwargs.get('learning_rate')
     }
 
 
 def main(architecture):
     print("Loading EMNIST dataset...")
-    full = datasets.EMNIST(
-        root="../data", split=train_config["emnist_type"],
-        train=True, download=True, transform=transform
-    )
+    full = datasets.EMNIST(root="../data", split=train_config["emnist_type"],
+                           train=True, download=True, transform=transform)
     ds = get_subsample(full)
 
     # baseline hyperparams
@@ -96,16 +96,12 @@ def main(architecture):
         'SGD':     lambda p: torch.optim.SGD(p, lr=lr, momentum=0.9),
         'RMSprop': lambda p: torch.optim.RMSprop(p, lr=lr)
     }
-    runs = []
-    for name, opt_fn in optim_map.items():
-        runs.append(run_experiment(
-            name, architecture, ds,
-            k_folds=folds, epochs=epochs,
-            batch_size=bs, learning_rate=lr,
-            optimizer_fn=opt_fn
-        ))
+    runs = [run_experiment(name, architecture, ds,
+                           k_folds=folds, epochs=epochs,
+                           batch_size=bs, learning_rate=lr,
+                           optimizer_fn=opt_fn)
+            for name, opt_fn in optim_map.items()]
     plot_metrics(runs, 'Optimizer Comparison')
-    # pick best optimizer
     best_opt = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
     best_optimizer_fn = optim_map[best_opt]
     print(f"Best optimizer: {best_opt}")
@@ -117,75 +113,66 @@ def main(architecture):
         'CosineAnnealing': {'scheduler_fn': lambda opt: torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)},
         'OneCycle':        {'scheduler_fn': lambda opt: torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=epochs)}
     }
-    runs = []
-    for name, params in sched_map.items():
-        runs.append(run_experiment(
-            name, architecture, ds,
-            k_folds=folds, epochs=epochs,
-            batch_size=bs, learning_rate=lr,
-            optimizer_fn=best_optimizer_fn,
-            **params
-        ))
+    runs = [run_experiment(name, architecture, ds,
+                           k_folds=folds, epochs=epochs,
+                           batch_size=bs, learning_rate=lr,
+                           optimizer_fn=best_optimizer_fn,
+                           **params)
+            for name, params in sched_map.items()]
     plot_metrics(runs, 'Scheduler Comparison')
     best_sched = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
     best_scheduler_fn = sched_map[best_sched].get('scheduler_fn')
     print(f"Best scheduler: {best_sched}")
 
     # 3) Regularization Comparison
-    reg_map = {
-        'No WD':   0.0,
-        'WD=1e-4': 1e-4,
-        'WD=1e-3': 1e-3
-    }
-    runs = []
-    for name, wd in reg_map.items():
-        runs.append(run_experiment(
-            name, architecture, ds,
-            k_folds=folds, epochs=epochs,
-            batch_size=bs, learning_rate=lr,
-            optimizer_fn=best_optimizer_fn,
-            scheduler_fn=best_scheduler_fn,
-            weight_decay=wd
-        ))
+    reg_map = {'No WD': 0.0, 'WD=1e-4': 1e-4, 'WD=1e-3': 1e-3}
+    runs = [run_experiment(name, architecture, ds,
+                           k_folds=folds, epochs=epochs,
+                           batch_size=bs, learning_rate=lr,
+                           optimizer_fn=best_optimizer_fn,
+                           scheduler_fn=best_scheduler_fn,
+                           weight_decay=wd)
+            for name, wd in reg_map.items()]
     plot_metrics(runs, 'Regularization Comparison')
     best_reg = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
     best_weight_decay = reg_map[best_reg]
     print(f"Best weight decay: {best_reg}")
 
     # 4) Batch Size & LR Grid
-    grid = [(32,1e-3),(32,1e-4),(64,1e-3),(64,1e-4)]
-    runs = []
-    for bs2, lr2 in grid:
-        label = f"BS={bs2}, LR={lr2}"
-        runs.append(run_experiment(
-            label, architecture, ds,
-            k_folds=folds, epochs=epochs,
-            batch_size=bs2, learning_rate=lr2,
-            optimizer_fn=best_optimizer_fn,
-            scheduler_fn=best_scheduler_fn,
-            weight_decay=best_weight_decay
-        ))
+    grid = [(32, 1e-3), (32, 1e-4), (64, 1e-3), (64, 1e-4)]
+    runs = [run_experiment(f"BS={bs2}, LR={lr2}", architecture, ds,
+                           k_folds=folds, epochs=epochs,
+                           batch_size=bs2, learning_rate=lr2,
+                           optimizer_fn=best_optimizer_fn,
+                           scheduler_fn=best_scheduler_fn,
+                           weight_decay=best_weight_decay)
+            for bs2, lr2 in grid]
     plot_metrics(runs, 'Batch Size & LR Grid')
-    best_cfg = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
-    print(f"Best BS/LR: {best_cfg}")
+    best_run = max(runs, key=lambda r: r['val_accuracy'][-1])
+    best_bs = best_run['batch_size']
+    best_lr = best_run['learning_rate']
+    print(f"Best BS/LR: BS={best_bs}, LR={best_lr}")
 
     # 5) Architecture Comparison
-    archs = ['EmnistCNN_16_64_128','EmnistCNN_32_128_256','EmnistCNN_8_32_64', 'EmnistCNN_16_64','EmnistCNN_32_128']
-    runs = []
-    for arch in archs:
-        runs.append(run_experiment(
-            arch, arch, ds,
-            k_folds=folds, epochs=epochs,
-            batch_size=bs, learning_rate=lr,
-            optimizer_fn=best_optimizer_fn,
-            scheduler_fn=best_scheduler_fn,
-            weight_decay=best_weight_decay
-        ))
+    archs = [
+        'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256',
+        'EmnistCNN_8_32_64', 'EmnistCNN_16_64',
+        'EmnistCNN_32_128', 'GoogleNet', 'ResNet18'
+    ]
+    runs = [run_experiment(arch, arch, ds,
+                           k_folds=folds, epochs=epochs,
+                           batch_size=best_bs,
+                           learning_rate=best_lr,
+                           optimizer_fn=best_optimizer_fn,
+                           scheduler_fn=best_scheduler_fn,
+                           weight_decay=best_weight_decay)
+            for arch in archs]
     plot_metrics(runs, 'Architecture Comparison')
     names = [r['name'] for r in runs]
     times = [r['time'] for r in runs]
-    plt.figure(figsize=(6,4))
+    plt.figure(figsize=(8, 4))
     plt.bar(names, times)
+    plt.xticks(rotation=45, ha='right')
     plt.title('Training Time by Architecture')
     plt.xlabel('Architecture')
     plt.ylabel('Avg Training Time (s)')
