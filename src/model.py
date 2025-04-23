@@ -70,17 +70,8 @@ class EmnistCNN(nn.Module):
         x = self.fcon2(x)
         return x
 
-
 def get_model(architecture):
-    if architecture == "EmnistCNN_16_64_128":
-        return EmnistCNN(**model_config["EmnistCNN_16_64_128"])
-    elif architecture == "EmnistCNN_32_128_256":
-        return EmnistCNN(**model_config["EmnistCNN_32_128_256"])
-    elif architecture == "EmnistCNN_8_32_64":
-        return EmnistCNN(**model_config["EmnistCNN_8_32_64"])
-    else:
-        raise ValueError(f"Unknown architecture: {architecture}")
-
+    return EmnistCNN(**model_config[architecture])
 
 def save_model(model, path):
     project_root = Path(__file__).parent.parent.resolve()

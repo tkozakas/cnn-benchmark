@@ -1,6 +1,6 @@
 train_config = {
     'emnist_type': 'balanced', # ! Need to change number of classes in model_config if changing this
-    'subsample_size': 10000,
+    'subsample_size': 1000,
     'epochs': 5,
     'val_split': 0.2,
     'k_folds': 3,
@@ -41,5 +41,24 @@ model_config = {
         "dropout": 0.3,
         "input_size": 28,
         "num_classes": 47
-    }
+    },
+    # 2 layers
+    "EmnistCNN_16_64": {
+        "fmaps1": 16,
+        "fmaps2": 64,
+        "fmaps3": None,
+        "dense": 256,
+        "dropout": 0.3,
+        "input_size": 28,
+        "num_classes": 47
+    },
+    "EmnistCNN_32_128": {
+        "fmaps1": 32,
+        "fmaps2": 128,
+        "fmaps3": None,
+        "dense": 256,
+        "dropout": 0.3,
+        "input_size": 28,
+        "num_classes": 47
+    },
 }

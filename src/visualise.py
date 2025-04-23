@@ -89,3 +89,21 @@ def plot_model_diffs(results, dataset_name):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
+import matplotlib.pyplot as plt
+
+def plot_comparison_curves(curves: dict[str, list[float]],
+                           x_label: str,
+                           y_label: str,
+                           title: str):
+    plt.figure(figsize=(8, 6))
+    for label, values in curves.items():
+        epochs = range(1, len(values) + 1)
+        plt.plot(epochs, values, label=label)
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.legend(loc='best')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()

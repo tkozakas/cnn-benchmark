@@ -7,7 +7,6 @@ Options:
 """
 
 import matplotlib.pyplot as plt
-import pandas as pd
 import torch
 from docopt import docopt
 from torchvision import datasets
@@ -15,236 +14,10 @@ from torchvision import datasets
 from src.config import train_config
 from src.model import get_model
 from src.train import k_fold_cross_validation, transform
-from src.visualise import plot_bar_chart
-
-
-
-def train_configuration_test(architecture, dataset, epochs, k_folds, batch_sizes, learning_rates):
-    configurations = [
-        {"learning_rate": lr, "train_batch_size": bs}
-        for lr in learning_rates
-        for bs in batch_sizes
-    ]
-
-    results = []
-    train_times = []
-
-    all_val_accuracies = {}
-    all_val_losses = {}
-
-    for config in configurations:
-        print(f"\n--- Testing Configuration: LR={config['learning_rate']}, Batch Size={config['train_batch_size']} ---")
-        all_results, avg_results = k_fold_cross_validation(
-            architecture=architecture,
-            dataset=dataset,
-            model_fn=lambda: get_model(architecture),
-            k_folds=k_folds,
-            epochs=epochs,
-            learning_rate=config["learning_rate"],
-            batch_size=config["train_batch_size"],
-            random_state=42,
-        )
-
-        config_key = f"LR={config['learning_rate']}, BS={config['train_batch_size']}"
-        avg_results["Configuration"] = config_key
-        results.append(avg_results)
-
-        train_times.append(avg_results["elapsed_time"])
-
-        val_acc = [fold_result["val_accuracy"] for fold_result in all_results]
-        val_loss = [fold_result["val_loss"] for fold_result in all_results]
-
-        val_acc = list(map(lambda x: sum(x) / len(x), zip(*val_acc)))
-        val_loss = list(map(lambda x: sum(x) / len(x), zip(*val_loss)))
-
-        all_val_accuracies[config_key] = val_acc
-        all_val_losses[config_key] = val_loss
-
-    plt.figure(figsize=(10, 6))
-    for config_key, val_acc in all_val_accuracies.items():
-        actual_epochs = len(val_acc)
-        epochs_range = range(1, actual_epochs + 1)
-        plt.plot(epochs_range, val_acc, label=config_key)
-    plt.title("Validation Accuracy Across Configurations")
-    plt.xlabel("Epochs")
-    plt.ylabel("Validation Accuracy")
-    plt.legend(loc="upper left", bbox_to_anchor=(1.05, 1), title="Configurations")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-    plt.figure(figsize=(10, 6))
-    for config_key, val_loss in all_val_losses.items():
-        actual_epochs = len(val_loss)
-        epochs_range = range(1, actual_epochs + 1)
-        plt.plot(epochs_range, val_loss, label=config_key)
-    plt.title("Validation Loss Across Configurations")
-    plt.xlabel("Epochs")
-    plt.ylabel("Validation Loss")
-    plt.legend(loc="upper left", bbox_to_anchor=(1.05, 1), title="Configurations")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-    config_labels = [f"LR={config['learning_rate']}, BS={config['train_batch_size']}" for config in configurations]
-    plt.figure(figsize=(10, 6))
-    plot_bar_chart(
-        plt.gca(),
-        x_values=config_labels,
-        heights=train_times,
-        title="Training Time for Configurations",
-        xlabel="Configuration (LR, BS)",
-        ylabel="Training Time (seconds)"
-    )
-    plt.tight_layout()
-    plt.show()
-
-    results_df = pd.DataFrame(results)
-    results_file = "../test_data/all_configuration_results.csv"
-    results_df.to_csv(results_file, index=False)
-    print(f"Results saved to {results_file}")
-
-    return results
-
-
-def model_config_test(datasets, epochs, k_folds, batch_size, learning_rate):
-    model_architectures = ["EmnistCNN_16_64_128", "EmnistCNN_32_128_256", "EmnistCNN_8_32_64"]
-    results = []
-
-    for dataset_name, dataset in datasets.items():
-        print(f"\n--- Dataset: {dataset_name} ---")
-
-        all_val_accuracies = {}
-        all_val_losses = {}
-        dataset_train_times = []
-
-        for architecture in model_architectures:
-            print(f"\n--- Testing Model: {architecture} on {dataset_name} ---")
-            all_results, avg_results = k_fold_cross_validation(
-                architecture=architecture,
-                dataset=dataset,
-                model_fn=lambda: get_model(architecture),
-                k_folds=k_folds,
-                epochs=epochs,
-                batch_size=batch_size,
-                learning_rate=learning_rate,
-                random_state=42,
-            )
-
-            avg_results["Architecture"] = architecture
-            avg_results["Dataset"] = dataset_name
-            results.append(avg_results)
-
-            dataset_train_times.append(avg_results["elapsed_time"])
-
-            val_acc = [fold_result["val_accuracy"] for fold_result in all_results]
-            val_loss = [fold_result["val_loss"] for fold_result in all_results]
-
-            val_acc = list(map(lambda x: sum(x) / len(x), zip(*val_acc)))
-            val_loss = list(map(lambda x: sum(x) / len(x), zip(*val_loss)))
-
-            all_val_accuracies[architecture] = val_acc
-            all_val_losses[architecture] = val_loss
-
-        plt.figure(figsize=(10, 6))
-        for architecture, val_acc in all_val_accuracies.items():
-            actual_epochs = len(val_acc)
-            epochs_range = range(1, actual_epochs + 1)
-            plt.plot(epochs_range, val_acc, label=architecture)
-        plt.title(f"Validation Accuracy Across Models on {dataset_name}")
-        plt.xlabel("Epochs")
-        plt.ylabel("Validation Accuracy")
-        plt.legend(loc="upper left", bbox_to_anchor=(1.05, 1), title="Models")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
-
-        plt.figure(figsize=(10, 6))
-        for architecture, val_loss in all_val_losses.items():
-            actual_epochs = len(val_loss)
-            epochs_range = range(1, actual_epochs + 1)
-            plt.plot(epochs_range, val_loss, label=architecture)
-        plt.title(f"Validation Loss Across Models on {dataset_name}")
-        plt.xlabel("Epochs")
-        plt.ylabel("Validation Loss")
-        plt.legend(loc="upper left", bbox_to_anchor=(1.05, 1), title="Models")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
-
-        plt.figure(figsize=(10, 6))
-        plot_bar_chart(
-            plt.gca(),
-            x_values=model_architectures,
-            heights=dataset_train_times,
-            title=f"Training Time for Models on {dataset_name}",
-            xlabel="Model Architecture",
-            ylabel="Training Time (seconds)"
-        )
-        plt.tight_layout()
-        plt.show()
-
-    results_df = pd.DataFrame(results)
-    results_file = "../test_data/all_model_config_results.csv"
-    results_df.to_csv(results_file, index=False)
-    print(f"Results saved to {results_file}")
-    return results
-
-
-def main(architecture):
-    test_epochs = 50
-
-    print("\n--- Testing different configurations for training ---")
-    train_configuration_test(
-        architecture=architecture,
-        dataset=get_subsample(datasets.EMNIST(
-            root="../data",
-            split=train_config["emnist_type"],
-            train=True,
-            download=True,
-            transform=transform
-        )),
-        epochs=test_epochs,
-        k_folds=train_config["k_folds"],
-        batch_sizes=[32, 64, 128],
-        learning_rates=[0.1, 0.01, 0.001, 0.0001]
-    )
-
-    print("\n--- Testing different model configurations ---")
-    model_config_test(
-        datasets={
-            "letters": get_subsample(datasets.EMNIST(
-                root="../data",
-                split="letters",
-                train=True,
-                download=True,
-                transform=transform
-            )),
-            "digits": get_subsample(datasets.EMNIST(
-                root="../data",
-                split="digits",
-                train=True,
-                download=True,
-                transform=transform
-            )),
-            "balanced": get_subsample(datasets.EMNIST(
-                root="../data",
-                split="balanced",
-                train=True,
-                download=True,
-                transform=transform
-            ))
-        },
-        epochs=test_epochs,
-        k_folds=train_config["k_folds"],
-        batch_size=train_config["train_batch_size"],
-        learning_rate=train_config["learning_rate"]
-    )
 
 
 def get_subsample(full_dataset):
-    if train_config["subsample_size"]:
-        print(f"Subsampling dataset to {train_config['subsample_size']} samples...")
+    if train_config.get("subsample_size"):
         subsample_size = train_config["subsample_size"]
         full_dataset, _ = torch.utils.data.random_split(
             full_dataset,
@@ -252,7 +25,173 @@ def get_subsample(full_dataset):
         )
     return full_dataset
 
+
+def plot_metrics(runs, title):
+    """
+    Plot a 2x2 grid of loss & accuracy curves for given runs.
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+    ax00, ax01, ax10, ax11 = axes.flatten()
+    for run in runs:
+        epochs = range(1, len(run['train_loss']) + 1)
+        ax00.plot(epochs, run['train_loss'], label=run['name'])
+        ax01.plot(epochs, run['val_loss'],   label=run['name'])
+        ax10.plot(epochs, run['train_accuracy'], label=run['name'])
+        ax11.plot(epochs, run['val_accuracy'],   label=run['name'])
+    ax00.set_title('Train Loss'); ax01.set_title('Val Loss')
+    ax10.set_title('Train Acc');  ax11.set_title('Val Acc')
+    for ax in [ax00, ax01, ax10, ax11]:
+        ax.set_xlabel('Epoch'); ax.grid(True); ax.legend(fontsize='small')
+    fig.suptitle(title)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+
+def run_experiment(name, architecture, dataset, **kwargs):
+    """
+    Run k-fold CV and return averaged metric curves and train time.
+    """
+    folds_data, avg_results = k_fold_cross_validation(
+        architecture=architecture,
+        dataset=dataset,
+        model_fn=lambda arch=architecture: get_model(arch),
+        **kwargs
+    )
+    # average across folds
+    per_fold_train_loss = [f['train_loss'] for f in folds_data]
+    per_fold_val_loss   = [f['val_loss']   for f in folds_data]
+    per_fold_train_acc  = [f['train_accuracy'] for f in folds_data]
+    per_fold_val_acc    = [f['val_accuracy']   for f in folds_data]
+    avg_train_loss = [sum(vals)/len(vals) for vals in zip(*per_fold_train_loss)]
+    avg_val_loss   = [sum(vals)/len(vals) for vals in zip(*per_fold_val_loss)]
+    avg_train_acc  = [sum(vals)/len(vals) for vals in zip(*per_fold_train_acc)]
+    avg_val_acc    = [sum(vals)/len(vals) for vals in zip(*per_fold_val_acc)]
+    return {
+        'name': name,
+        'train_loss': avg_train_loss,
+        'val_loss': avg_val_loss,
+        'train_accuracy': avg_train_acc,
+        'val_accuracy': avg_val_acc,
+        'time': avg_results.get('avg_time', avg_results.get('elapsed_time'))
+    }
+
+
+def main(architecture):
+    print("Loading EMNIST dataset...")
+    full = datasets.EMNIST(
+        root="../data", split=train_config["emnist_type"],
+        train=True, download=True, transform=transform
+    )
+    ds = get_subsample(full)
+
+    # baseline hyperparams
+    lr     = train_config['learning_rate']
+    epochs = train_config['epochs']
+    folds  = train_config['k_folds']
+    bs     = train_config['train_batch_size']
+
+    # 1) Optimizer Comparison
+    optim_map = {
+        'Adam':    lambda p: torch.optim.Adam(p, lr=lr),
+        'SGD':     lambda p: torch.optim.SGD(p, lr=lr, momentum=0.9),
+        'RMSprop': lambda p: torch.optim.RMSprop(p, lr=lr)
+    }
+    runs = []
+    for name, opt_fn in optim_map.items():
+        runs.append(run_experiment(
+            name, architecture, ds,
+            k_folds=folds, epochs=epochs,
+            batch_size=bs, learning_rate=lr,
+            optimizer_fn=opt_fn
+        ))
+    plot_metrics(runs, 'Optimizer Comparison')
+    # pick best optimizer
+    best_opt = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
+    best_optimizer_fn = optim_map[best_opt]
+    print(f"Best optimizer: {best_opt}")
+
+    # 2) Scheduler Comparison
+    sched_map = {
+        'None':            {},
+        'StepLR':          {'scheduler_fn': lambda opt: torch.optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.1)},
+        'CosineAnnealing': {'scheduler_fn': lambda opt: torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)},
+        'OneCycle':        {'scheduler_fn': lambda opt: torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=epochs)}
+    }
+    runs = []
+    for name, params in sched_map.items():
+        runs.append(run_experiment(
+            name, architecture, ds,
+            k_folds=folds, epochs=epochs,
+            batch_size=bs, learning_rate=lr,
+            optimizer_fn=best_optimizer_fn,
+            **params
+        ))
+    plot_metrics(runs, 'Scheduler Comparison')
+    best_sched = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
+    best_scheduler_fn = sched_map[best_sched].get('scheduler_fn')
+    print(f"Best scheduler: {best_sched}")
+
+    # 3) Regularization Comparison
+    reg_map = {
+        'No WD':   0.0,
+        'WD=1e-4': 1e-4,
+        'WD=1e-3': 1e-3
+    }
+    runs = []
+    for name, wd in reg_map.items():
+        runs.append(run_experiment(
+            name, architecture, ds,
+            k_folds=folds, epochs=epochs,
+            batch_size=bs, learning_rate=lr,
+            optimizer_fn=best_optimizer_fn,
+            scheduler_fn=best_scheduler_fn,
+            weight_decay=wd
+        ))
+    plot_metrics(runs, 'Regularization Comparison')
+    best_reg = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
+    best_weight_decay = reg_map[best_reg]
+    print(f"Best weight decay: {best_reg}")
+
+    # 4) Batch Size & LR Grid
+    grid = [(32,1e-3),(32,1e-4),(64,1e-3),(64,1e-4)]
+    runs = []
+    for bs2, lr2 in grid:
+        label = f"BS={bs2}, LR={lr2}"
+        runs.append(run_experiment(
+            label, architecture, ds,
+            k_folds=folds, epochs=epochs,
+            batch_size=bs2, learning_rate=lr2,
+            optimizer_fn=best_optimizer_fn,
+            scheduler_fn=best_scheduler_fn,
+            weight_decay=best_weight_decay
+        ))
+    plot_metrics(runs, 'Batch Size & LR Grid')
+    best_cfg = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
+    print(f"Best BS/LR: {best_cfg}")
+
+    # 5) Architecture Comparison
+    archs = ['EmnistCNN_16_64_128','EmnistCNN_32_128_256','EmnistCNN_8_32_64', 'EmnistCNN_16_64','EmnistCNN_32_128']
+    runs = []
+    for arch in archs:
+        runs.append(run_experiment(
+            arch, arch, ds,
+            k_folds=folds, epochs=epochs,
+            batch_size=bs, learning_rate=lr,
+            optimizer_fn=best_optimizer_fn,
+            scheduler_fn=best_scheduler_fn,
+            weight_decay=best_weight_decay
+        ))
+    plot_metrics(runs, 'Architecture Comparison')
+    names = [r['name'] for r in runs]
+    times = [r['time'] for r in runs]
+    plt.figure(figsize=(6,4))
+    plt.bar(names, times)
+    plt.title('Training Time by Architecture')
+    plt.xlabel('Architecture')
+    plt.ylabel('Avg Training Time (s)')
+    plt.tight_layout()
+    plt.show()
+
 if __name__ == "__main__":
-    arguments = docopt(__doc__)
-    architecture = arguments['--architecture']
-    main(architecture)
+    args = docopt(__doc__)
+    main(args['--architecture'])

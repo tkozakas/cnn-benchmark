@@ -32,3 +32,10 @@ source ~/.bashrc # or zshrc
 # Install PyTorch with ROCm support (in a virtual environment)
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
 ```
+
+# The experiments
+1. Optimizer accuracy comparison (Adam is better -> use Adam)
+2. Learning rate scheduler comparison (CosineAnnealingLR is better -> use CosineAnnealingLR)
+3. Regularization comparison (L2 is better -> use L2)
+4. Batch Size & Learning‐Rate Grid (Find sweet spot for batch size and learning rate)
+5. Architecture comparison (Emnist with 2 layers or 3 or RNN or RCNN (existing))
