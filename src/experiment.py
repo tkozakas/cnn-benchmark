@@ -47,10 +47,36 @@ def plot_metrics(runs, title):
     plt.show()
 
 
+def plot_time(runs, title):
+    names = [r['name'] for r in runs]
+    times = [r['time'] for r in runs]
+    plt.figure(figsize=(8, 4))
+    plt.bar(names, times)
+    plt.xticks(rotation=45, ha='right')
+    plt.title(title)
+    plt.xlabel('Configuration')
+    plt.ylabel('Avg Training Time (s)')
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_test_accuracy(runs, title):
+    names = [r['name'] for r in runs]
+    accs = [r['test_accuracy'] for r in runs]
+    plt.figure(figsize=(8, 4))
+    plt.bar(names, accs)
+    plt.xticks(rotation=45, ha='right')
+    plt.title(title)
+    plt.xlabel('Configuration')
+    plt.ylabel('Avg Test Accuracy')
+    plt.tight_layout()
+    plt.show()
+
+
 def run_experiment(name, architecture, dataset, **kwargs):
     """
     Run k-fold CV and return averaged metric curves, train time,
-    plus batch_size and learning_rate if provided.
+    plus test accuracy, batch_size and learning_rate if provided.
     """
     folds_data, avg_results = k_fold_cross_validation(
         architecture=architecture,
@@ -58,6 +84,7 @@ def run_experiment(name, architecture, dataset, **kwargs):
         model_fn=lambda arch=architecture: get_model(arch),
         **kwargs
     )
+    # aggregate per-epoch metrics
     per_fold_train_loss = [f['train_loss'] for f in folds_data]
     per_fold_val_loss   = [f['val_loss']   for f in folds_data]
     per_fold_train_acc  = [f['train_accuracy'] for f in folds_data]
@@ -72,6 +99,7 @@ def run_experiment(name, architecture, dataset, **kwargs):
         'val_loss': avg_val_loss,
         'train_accuracy': avg_train_acc,
         'val_accuracy': avg_val_acc,
+        'test_accuracy': avg_results['avg_test_acc'],
         'time': avg_results.get('avg_time', avg_results.get('elapsed_time')),
         'batch_size': kwargs.get('batch_size'),
         'learning_rate': kwargs.get('learning_rate')
@@ -148,6 +176,7 @@ def main(architecture):
                            weight_decay=best_weight_decay)
             for bs2, lr2 in grid]
     plot_metrics(runs, 'Batch Size & LR Grid')
+    plot_test_accuracy(runs, 'Batch/LR: Test Accuracy Comparison')
     best_run = max(runs, key=lambda r: r['val_accuracy'][-1])
     best_bs = best_run['batch_size']
     best_lr = best_run['learning_rate']
@@ -168,16 +197,8 @@ def main(architecture):
                            weight_decay=best_weight_decay)
             for arch in archs]
     plot_metrics(runs, 'Architecture Comparison')
-    names = [r['name'] for r in runs]
-    times = [r['time'] for r in runs]
-    plt.figure(figsize=(8, 4))
-    plt.bar(names, times)
-    plt.xticks(rotation=45, ha='right')
-    plt.title('Training Time by Architecture')
-    plt.xlabel('Architecture')
-    plt.ylabel('Avg Training Time (s)')
-    plt.tight_layout()
-    plt.show()
+    plot_time(runs, 'Architecture: Training Time')
+    plot_test_accuracy(runs, 'Architecture: Test Accuracy Comparison')
 
 if __name__ == "__main__":
     args = docopt(__doc__)
