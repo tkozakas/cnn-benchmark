@@ -62,8 +62,8 @@ def plot_time(runs, title):
 
 def plot_test_accuracy(runs, title):
     names = [r['name'] for r in runs]
-    accs = [r['test_accuracy'] for r in runs]
-    plt.figure(figsize=(8, 4))
+    accs  = [r['test_accuracy'] for r in runs]
+    plt.figure(figsize=(8,4))
     plt.bar(names, accs)
     plt.xticks(rotation=45, ha='right')
     plt.title(title)
@@ -117,6 +117,7 @@ def main(architecture):
     epochs = train_config['epochs']
     folds  = train_config['k_folds']
     bs     = train_config['train_batch_size']
+    early_stopping_patience = train_config['early_stopping_patience']
 
     # 1) Optimizer Comparison
     optim_map = {
@@ -130,7 +131,8 @@ def main(architecture):
                            optimizer_fn=opt_fn)
             for name, opt_fn in optim_map.items()]
     plot_metrics(runs, 'Optimizer Comparison')
-    best_opt = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
+    plot_test_accuracy(runs, 'Optimizer: Test Accuracy Comparison')
+    best_opt = max(runs, key=lambda r: r['test_accuracy'])['name']
     best_optimizer_fn = optim_map[best_opt]
     print(f"Best optimizer: {best_opt}")
 
@@ -145,10 +147,12 @@ def main(architecture):
                            k_folds=folds, epochs=epochs,
                            batch_size=bs, learning_rate=lr,
                            optimizer_fn=best_optimizer_fn,
+                           early_stopping_patience=early_stopping_patience,
                            **params)
             for name, params in sched_map.items()]
     plot_metrics(runs, 'Scheduler Comparison')
-    best_sched = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
+    plot_test_accuracy(runs, 'Scheduler: Test Accuracy Comparison')
+    best_sched = max(runs, key=lambda r: r['test_accuracy'])['name']
     best_scheduler_fn = sched_map[best_sched].get('scheduler_fn')
     print(f"Best scheduler: {best_sched}")
 
@@ -159,10 +163,12 @@ def main(architecture):
                            batch_size=bs, learning_rate=lr,
                            optimizer_fn=best_optimizer_fn,
                            scheduler_fn=best_scheduler_fn,
-                           weight_decay=wd)
+                           weight_decay=wd,
+                           early_stopping_patience=early_stopping_patience)
             for name, wd in reg_map.items()]
     plot_metrics(runs, 'Regularization Comparison')
-    best_reg = max(runs, key=lambda r: r['val_accuracy'][-1])['name']
+    plot_test_accuracy(runs, 'Regularization: Test Accuracy Comparison')
+    best_reg = max(runs, key=lambda r: r['test_accuracy'])['name']
     best_weight_decay = reg_map[best_reg]
     print(f"Best weight decay: {best_reg}")
 
@@ -173,11 +179,12 @@ def main(architecture):
                            batch_size=bs2, learning_rate=lr2,
                            optimizer_fn=best_optimizer_fn,
                            scheduler_fn=best_scheduler_fn,
-                           weight_decay=best_weight_decay)
+                           weight_decay=best_weight_decay,
+                           early_stopping_patience=early_stopping_patience)
             for bs2, lr2 in grid]
     plot_metrics(runs, 'Batch Size & LR Grid')
     plot_test_accuracy(runs, 'Batch/LR: Test Accuracy Comparison')
-    best_run = max(runs, key=lambda r: r['val_accuracy'][-1])
+    best_run = max(runs, key=lambda r: r['test_accuracy'])
     best_bs = best_run['batch_size']
     best_lr = best_run['learning_rate']
     print(f"Best BS/LR: BS={best_bs}, LR={best_lr}")
@@ -194,7 +201,8 @@ def main(architecture):
                            learning_rate=best_lr,
                            optimizer_fn=best_optimizer_fn,
                            scheduler_fn=best_scheduler_fn,
-                           weight_decay=best_weight_decay)
+                           weight_decay=best_weight_decay,
+                           early_stopping_patience=early_stopping_patience)
             for arch in archs]
     plot_metrics(runs, 'Architecture Comparison')
     plot_time(runs, 'Architecture: Training Time')

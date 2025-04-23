@@ -39,3 +39,9 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 3. Regularization comparison (L2 is better -> use L2)
 4. Batch Size & Learning‐Rate Grid (Find sweet spot for batch size and learning rate)
 5. Architecture comparison (Emnist with 2 layers or 3 or RNN or RCNN (existing))
+
+# Train on VU supercomputer
+```bash
+ssh mifvu_username@uosis.mif.vu.lt
+ssh hpc
+```

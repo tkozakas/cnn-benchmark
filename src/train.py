@@ -243,6 +243,7 @@ def main(architecture):
         k_folds=train_config["k_folds"],
         epochs=train_config["epochs"],
         batch_size=train_config["train_batch_size"],
+        early_stopping_patience=train_config["early_stopping_patience"],
     )
 
     print("\nPlotting results...")
