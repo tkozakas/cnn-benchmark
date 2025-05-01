@@ -62,36 +62,6 @@ def plot_confusion_matrix(model, loader, device, classes):
     plt.show()
 
 
-def plot_bar_chart(ax, x_values, heights, title, xlabel, ylabel, bar_width=0.5):
-    ax.bar(x_values, heights, color='skyblue', width=bar_width, align='center')
-
-    ax.set_xticks(x_values)
-    ax.set_xticklabels(x_values, rotation=45, ha='right')
-
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.grid(axis='y', linestyle='--', alpha=0.7)
-
-
-def plot_model_diffs(results, dataset_name):
-    plt.figure(figsize=(10, 6))
-
-    for architecture, data in results.items():
-        val_accuracy = data["val_accuracy"]
-        epochs_range = range(1, len(val_accuracy) + 1)
-        plt.plot(epochs_range, val_accuracy, label=architecture)
-
-    plt.title(f"Validation Accuracy vs. Epochs for Different Architectures on {dataset_name} Dataset")
-    plt.xlabel("Epochs")
-    plt.ylabel("Validation Accuracy")
-    plt.legend(title="Architecture")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-import matplotlib.pyplot as plt
-
 def plot_comparison_curves(curves: dict[str, list[float]],
                            x_label: str,
                            y_label: str,

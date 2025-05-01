@@ -1,46 +1,38 @@
-train_config = {
-    # Which EMNIST split to use: ‘balanced’ gives you all 47 classes.
-    'emnist_type':     'balanced',
+test_config = {
+    'emnist_type': 'balanced',
+    'subsample_size': 10000,
+    'epochs': 5,
+    'val_split': 0.2,
+    'k_folds': 5,
+    'valid_interval': 1,
+    'show_interval': 1,
 
-    # Use the full dataset (no forced subsampling)
-    'subsample_size':  None,
+    'train_batch_size': 512,
+    'eval_batch_size': 128,
+    'learning_rate': 5e-4,
+    'weight_decay': 1e-4,
+    'cpu_workers': 6,
 
-    # Train up to 100 epochs, but rely on early stopping (patience=10)
-    'epochs':          100,
-
-    # Use 10 % of each fold as a held-out validation set
-    'val_split':       0.1,
-
-    # 5-fold cross-validation is a good compromise between stability and speed
-    'k_folds':         5,
-
-    # Evaluate on the validation set every epoch (interval=1)
-    'valid_interval':  1,
-
-    # Save the “best so far” model every time val-loss improves
-    # and also checkpoint every 10 epochs in case you want to roll back
-    'save_interval':   10,
-
-    # Print training progress every epoch
-    'show_interval':   1,
-
-    # A slightly larger batch lets you fully utilize a typical GPU
-    'train_batch_size':128,
-    'eval_batch_size': 256,
-
-    # Start with a modest LR and decay it with a scheduler (e.g. OneCycleLR or CosineAnnealing)
-    'learning_rate':   5e-4,
-
-    # Add a bit of L2 weight decay to help generalization
-    'weight_decay':    1e-4,
-
-    # Number of CPU data‐loading workers
-    'cpu_workers':     8,
-
-    # Early‐stopping patience (stop if val‐loss doesn’t improve in this many epochs)
     'early_stopping_patience': 10
 }
 
+train_config = {
+    'emnist_type':     'balanced',
+    'subsample_size': None,
+    'epochs': 100,
+    'val_split':       0.2,
+    'k_folds':         5,
+    'valid_interval':  1,
+    'show_interval':   1,
+
+    'train_batch_size': 512,
+    'eval_batch_size': 128,
+    'learning_rate':   5e-4,
+    'weight_decay':    1e-4,
+    'cpu_workers': 6,
+
+    'early_stopping_patience': 10
+}
 
 # "num_classes": # letters = 26, digits = 10, balanced = 47
 model_config = {
