@@ -14,7 +14,7 @@ Options:
     --lr=LR                 Learning rate                   [default: {learning_rate}].
     --weight-decay=WD       Weight decay (L2)               [default: {weight_decay}].
     --patience=P            Early-stop patience             [default: {early_stopping_patience}].
-""".format(**__import__('src.config', fromlist=['test_config']).test_config)
+""".format(**__import__('config', fromlist=['test_config']).test_config)
 
 import os
 import warnings

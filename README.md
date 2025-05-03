@@ -46,7 +46,7 @@ EMNIST
 
 # Usage
 Note: The following commands are examples and may need to be adjusted based on your specific setup and requirements.
-The defaults are set in the `config.py` file.
+The defaults are set in the `config.py` file.'
 ## Train and evaluate model
 
 ```bash

@@ -14,7 +14,7 @@ Options:
     --lr=LR                 Learning rate              [default: {learning_rate}].
     --weight-decay=WD       Weight decay (L2)          [default: {weight_decay}].
     --patience=P            EarlyStop patience         [default: {early_stopping_patience}].
-""".format(**__import__('src.config', fromlist=['train_config']).train_config)
+""".format(**__import__('config', fromlist=['train_config']).train_config)
 
 import re
 import subprocess
