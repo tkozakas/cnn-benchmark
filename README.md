@@ -16,7 +16,7 @@ EMNIST
 5. Architecture comparison (Emnist with 2 layers or 3 or RNN or RCNN (existing))
 
 
-## [uv](https://github.com/astral-sh/uv) based python wrapper environment
+## [uv](https://github.com/astral-sh/uv) python wrapper environment
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source $HOME/.local/bin/env
