@@ -34,7 +34,6 @@ pyparsing==3.2.3
 pysocks==1.7.1
 pytesseract==0.3.13
 python-dateutil==2.9.0.post0
-pytorch-triton-rocm==3.1.0
 pytz==2025.2
 rich==14.0.0
 scikit-learn==1.6.1
