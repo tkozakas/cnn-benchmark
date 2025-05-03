@@ -35,7 +35,6 @@ import warnings
 import numpy as np
 import psutil
 import torch
-from docopt import docopt
 from sklearn.exceptions import UndefinedMetricWarning
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
 from sklearn.model_selection import KFold
@@ -45,7 +44,8 @@ from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
 from config import train_config, model_config
-from model import get_model, save_model, load_model
+from model import get_model, save_model, load_model, get_subsample
+from src.utility import parse_args
 from visualise import (
     plot_aggregated_learning_curves,
     plot_confusion_matrix
@@ -177,16 +177,17 @@ def init_model_optimizer_scheduler(model_fn, learning_rate,
 
 def train(architecture, dataset, model_fn,
           k_folds, epochs,
-          batch_size, learning_rate=None,
-          weight_decay=0.0,
-          random_state=42,
+          batch_size, learning_rate,
+          weight_decay,
           optimizer_fn=None,
           scheduler_fn=None,
           criterion=None,
           early_stopping_patience=None,
-          cpu_workers=4):
+          device='cuda',
+          cpu_workers=4,
+          random_state=42):
     """Run k-fold CV, returning per-fold histories and aggregated averages."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(device)
     criterion = criterion or nn.CrossEntropyLoss()
     kfold = KFold(
         n_splits=k_folds,
@@ -289,27 +290,12 @@ def train(architecture, dataset, model_fn,
 
     return all_results, avg_results
 
-def main(architecture):
-    args = docopt(__doc__)
-    # override or use defaults
-    K = int(args['--k-folds'])
-    N = int(args['--epochs'])
-    B = int(args['--batch-size'])
-    LR = float(args['--lr'])
-    WD = float(args['--weight-decay'])
-    PAT = int(args['--patience'])
-    CPU_WORKERS = int(args['--cpu-worker'])
-    DEVICE = args['--device']
-    EMNIST_TYPE = args['--emnist-type']
-    SUBSAMPLE_SIZE = int(args['--subsample-size']) if args['--subsample-size'] else None
 
-    torch.device(DEVICE)
+def main():
+    ARCHITECTURE, B, CPU_WORKERS, DEVICE, EMNIST_TYPE, K, LR, N, PAT, SUBSAMPLE_SIZE, WD = parse_args()
 
-    print(f"Device: {DEVICE}")
-    print(f"Architecture: {architecture}")
     print(f"Using K={K}, epochs={N}, batch_size={B}, lr={LR}, wd={WD}, patience={PAT}")
 
-    # load dataset
     full = datasets.EMNIST(
         root="../data",
         split=EMNIST_TYPE,
@@ -317,17 +303,14 @@ def main(architecture):
         download=True,
         transform=transform
     )
-    if SUBSAMPLE_SIZE:
-        full, _ = torch.utils.data.random_split(
-            full,
-            [SUBSAMPLE_SIZE, len(full) - SUBSAMPLE_SIZE]
-        )
+    ds = get_subsample(full, SUBSAMPLE_SIZE)
 
     # train + CV
     all_results, avg_results = train(
-        architecture=architecture,
-        dataset=full,
-        model_fn=lambda: get_model(architecture),
+        device=DEVICE,
+        architecture=ARCHITECTURE,
+        dataset=ds,
+        model_fn=lambda: get_model(ARCHITECTURE),
         k_folds=K,
         epochs=N,
         batch_size=B,
@@ -349,20 +332,20 @@ def main(architecture):
 
     # final confusion + test metrics
     test_loader = DataLoader(
-        full,
+        ds,
         batch_size=B,
         num_workers=CPU_WORKERS,
         shuffle=False,
         pin_memory=torch.cuda.is_available(),
         persistent_workers=True
     )
-    model = get_model(architecture).to(DEVICE)
+    model = get_model(ARCHITECTURE).to(DEVICE)
     model = load_model(
-        model, f"{architecture}_fold{K}.pth"
+        model, f"{ARCHITECTURE}_fold{K}.pth"
     )
     plot_confusion_matrix(
         model, test_loader, DEVICE,
-        classes=list(range(model_config[architecture]["num_classes"]))
+        classes=list(range(model_config[ARCHITECTURE]["num_classes"]))
     )
     test_loss, test_acc, tp, fp, precision, sensitivity, f1_score = evaluate_and_metrics(
         model, test_loader, nn.CrossEntropyLoss(), DEVICE
@@ -375,5 +358,4 @@ def main(architecture):
     print(f"F1 Score: {f1_score:.4f}")
 
 if __name__ == "__main__":
-    args = docopt(__doc__)
-    main(args['--architecture'])
+    main()

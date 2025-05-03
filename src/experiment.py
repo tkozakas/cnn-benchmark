@@ -33,25 +33,14 @@ import warnings
 import numpy as np
 import pandas as pd
 import torch
-from docopt import docopt
 from torchvision import datasets
 
-from model import get_model
+from src.utility import parse_args, get_subsample
 from train import train, transform
 from visualise import plot_metrics, plot_test_accuracy, plot_time
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
-
-
-def get_subsample(full_dataset, subsample_size):
-    """Optionally subsample the dataset."""
-    if subsample_size:
-        full_dataset, _ = torch.utils.data.random_split(
-            full_dataset,
-            [subsample_size, len(full_dataset) - subsample_size]
-        )
-    return full_dataset
 
 
 def run_experiment(name, architecture, dataset, **kwargs):
@@ -108,25 +97,11 @@ def save_test_data(data, filename):
     )
 
 
-def main(architecture):
-    # parse CLI args
-    args = docopt(__doc__)
-    K = int(args['--k-folds'])
-    N = int(args['--epochs'])
-    B = int(args['--batch-size'])
-    LR = float(args['--lr'])
-    WD = float(args['--weight-decay'])
-    PAT = int(args['--patience'])
-    CPU_WORKERS = int(args['--cpu-worker'])
-    DEVICE = args['--device']
-    EMNIST_TYPE = args['--emnist-type']
-    SUBSAMPLE_SIZE = int(args['--subsample-size'])
+def main():
+    ARCHITECTURE, B, CPU_WORKERS, DEVICE, EMNIST_TYPE, K, LR, N, PAT, SUBSAMPLE_SIZE, WD = parse_args()
 
-    print(f"Device: {DEVICE}")
-    print(f"Architecture: {architecture}")
     print(f"Config → folds: {K}, epochs: {N}, batch_size: {B}, lr: {LR}, wd: {WD}, patience: {PAT}")
 
-    # load and optionally subsample EMNIST
     full = datasets.EMNIST(
         root="../data",
         split=EMNIST_TYPE,
@@ -143,12 +118,13 @@ def main(architecture):
     }
     runs = [
         run_experiment(
-            name, architecture, ds,
+            name, ARCHITECTURE, ds,
             k_folds=K, epochs=N, batch_size=B,
             learning_rate=LR, optimizer_fn=opt_fn,
             weight_decay=WD,
             early_stopping_patience=PAT,
             cpu_workers=CPU_WORKERS,
+            device=DEVICE
         )
         for name, opt_fn in optim_map.items()
     ]
@@ -168,12 +144,13 @@ def main(architecture):
     }
     runs = [
         run_experiment(
-            name, architecture, ds,
+            name, ARCHITECTURE, ds,
             k_folds=K, epochs=N, batch_size=B,
             learning_rate=LR, optimizer_fn=best_opt_fn,
             weight_decay=WD,
             early_stopping_patience=PAT,
             cpu_workers=CPU_WORKERS,
+            device=DEVICE,
             **params
         )
         for name, params in sched_map.items()
@@ -189,13 +166,14 @@ def main(architecture):
     reg_map = {'No WD': 0.0, 'WD=1e-5': 1e-5, 'WD=1e-4': 1e-4, 'WD=1e-3': 1e-3}
     runs = [
         run_experiment(
-            name, architecture, ds,
+            name, ARCHITECTURE, ds,
             k_folds=K, epochs=N, batch_size=B,
             learning_rate=LR, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
             weight_decay=wd,
             early_stopping_patience=PAT,
-            cpu_workers=CPU_WORKERS
+            cpu_workers=CPU_WORKERS,
+            device=DEVICE
         )
         for name, wd in reg_map.items()
     ]
@@ -210,13 +188,14 @@ def main(architecture):
     batch_sizes = [64, 128, 256, 512, 1024]
     runs_bs = [
         run_experiment(
-            f"BS={b}", architecture, ds,
+            f"BS={b}", ARCHITECTURE, ds,
             k_folds=K, epochs=N, batch_size=b,
             learning_rate=LR, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
             weight_decay=best_wd,
             early_stopping_patience=PAT,
-            cpu_workers=CPU_WORKERS
+            cpu_workers=CPU_WORKERS,
+            device=DEVICE
         )
         for b in batch_sizes
     ]
@@ -231,13 +210,14 @@ def main(architecture):
     lr_grid = [1e-3, 1e-4, 1e-5]
     runs_lr = [
         run_experiment(
-            f"BS={best_bs}, LR={l}", architecture, ds,
+            f"BS={best_bs}, LR={l}", ARCHITECTURE, ds,
             k_folds=K, epochs=N, batch_size=best_bs,
             learning_rate=l, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
             weight_decay=best_wd,
             early_stopping_patience=PAT,
-            cpu_workers=CPU_WORKERS
+            cpu_workers=CPU_WORKERS,
+            device=DEVICE
         )
         for l in lr_grid
     ]
@@ -261,7 +241,8 @@ def main(architecture):
             scheduler_fn=best_sched_fn,
             weight_decay=best_wd,
             early_stopping_patience=PAT,
-            cpu_workers=CPU_WORKERS
+            cpu_workers=CPU_WORKERS,
+            device=DEVICE
         )
         for arch in archs
     ]
@@ -272,5 +253,4 @@ def main(architecture):
 
 
 if __name__ == "__main__":
-    args = docopt(__doc__)
-    main(args['--architecture'])
+    main()
