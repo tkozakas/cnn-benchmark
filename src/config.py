@@ -17,7 +17,7 @@ test_config = {
 train_config = {
     'emnist_type':     'balanced',
     'subsample_size': None,
-    'epochs': 100,
+    'epochs': 30,
     'val_split':       0.2,
     'k_folds':         5,
     'valid_interval':  1,
@@ -29,7 +29,7 @@ train_config = {
     'weight_decay':    1e-4,
     'cpu_workers': 6,
 
-    'early_stopping_patience': 10
+    'early_stopping_patience': 5
 }
 
 # "num_classes": # letters = 26, digits = 10, balanced = 47

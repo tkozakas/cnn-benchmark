@@ -45,11 +45,31 @@ EMNIST
 ```
 
 # Usage
+Note: The following commands are examples and may need to be adjusted based on your specific setup and requirements.
+The defaults are set in the `config.py` file.
+## Train and evaluate model
+
 ```bash
-    # Train models
-    python train.py
-    # Evaluate models
-    python evaluate.py
+    python train.py \
+      --architecture EmnistCNN_32_128_256 \
+      --k-folds 5 \
+      --epochs 50 \
+      --batch-size 128 \
+      --lr 0.001 \
+      --weight-decay 0.0001 \
+      --patience 5
+```
+
+## Experiment on finding the best hyperparameters
+```bash
+    python experiment.py \
+      --architecture ResNet18 \
+      --k-folds 3 \
+      --epochs 25 \
+      --batch-size 128 \
+      --lr 0.0005 \
+      --weight-decay 0.0001 \
+      --patience 5
 ```
 
 ## Train on VU supercomputer

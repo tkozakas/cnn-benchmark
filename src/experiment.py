@@ -1,10 +1,21 @@
 """
 Usage:
     experiment.py [--architecture=ARCH]
+                  [--k-folds=K] [--epochs=N] [--batch-size=B]
+                  [--lr=LR] [--weight-decay=WD] [--patience=P]
 
 Options:
-    --architecture=ARCH   Specify the architecture to use [default: EmnistCNN_16_64_128].
-"""
+    -h --help               Show this help message.
+    --architecture=ARCH     Specify the architecture to use
+                            [default: EmnistCNN_16_64_128].
+    --k-folds=K             Number of CV folds              [default: {k_folds}].
+    --epochs=N              Max epochs per fold             [default: {epochs}].
+    --batch-size=B          Training batch size             [default: {train_batch_size}].
+    --lr=LR                 Learning rate                   [default: {learning_rate}].
+    --weight-decay=WD       Weight decay (L2)               [default: {weight_decay}].
+    --patience=P            Early-stop patience             [default: {early_stopping_patience}].
+""".format(**__import__('src.config', fromlist=['test_config']).test_config)
+
 import os
 import warnings
 
@@ -16,15 +27,16 @@ from torchvision import datasets
 
 from src.config import test_config
 from src.model import get_model
-from src.train import k_fold_cross_validation, transform
+from src.train import train, transform
 from src.visualise import plot_metrics, plot_test_accuracy, plot_time
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
 
-def get_subsample(full_dataset):
-    if test_config.get("subsample_size"):
-        subsample_size = test_config["subsample_size"]
+
+def get_subsample(full_dataset, subsample_size):
+    """Optionally subsample the dataset."""
+    if subsample_size:
         full_dataset, _ = torch.utils.data.random_split(
             full_dataset,
             [subsample_size, len(full_dataset) - subsample_size]
@@ -33,130 +45,149 @@ def get_subsample(full_dataset):
 
 
 def run_experiment(name, architecture, dataset, **kwargs):
-    folds_data, avg_results = k_fold_cross_validation(
+    """Run one experimental configuration and collect metrics."""
+    folds_data, avg_results = train(
         architecture=architecture,
         dataset=dataset,
         model_fn=lambda arch=architecture: get_model(arch),
         **kwargs
     )
-    # per-epoch averages (for plotting only)
-    per_fold_train_loss = [f['train_loss'] for f in folds_data]
-    per_fold_val_loss   = [f['val_loss']   for f in folds_data]
-    per_fold_train_acc  = [f['train_accuracy'] for f in folds_data]
-    per_fold_val_acc    = [f['val_accuracy']   for f in folds_data]
 
-    avg_train_loss_curve = [sum(vals)/len(vals) for vals in zip(*per_fold_train_loss)]
-    avg_val_loss_curve   = [sum(vals)/len(vals) for vals in zip(*per_fold_val_loss)]
-    avg_train_acc_curve  = [sum(vals)/len(vals) for vals in zip(*per_fold_train_acc)]
-    avg_val_acc_curve    = [sum(vals)/len(vals) for vals in zip(*per_fold_val_acc)]
-
-    # scalar summaries
-    avg_train_loss    = float(np.mean(avg_train_loss_curve))
-    avg_val_loss      = float(np.mean(avg_val_loss_curve))
-    avg_train_accuracy= float(np.mean(avg_train_acc_curve))
-    avg_val_accuracy  = float(np.mean(avg_val_acc_curve))
-    test_accuracy     = avg_results['avg_test_acc']
-    time_taken        = avg_results.get('avg_time', avg_results.get('elapsed_time'))
-
-    return {
-        'name': name,
-        'batch_size':      kwargs.get('batch_size'),
-        'learning_rate':   kwargs.get('learning_rate'),
-        'avg_train_loss':    avg_train_loss,
-        'avg_val_loss':      avg_val_loss,
-        'avg_train_accuracy':avg_train_accuracy,
-        'avg_val_accuracy':  avg_val_accuracy,
-        'test_accuracy':     test_accuracy,
-        'time':              time_taken,
-        # keep these for plotting:
-        'train_loss_curve':  avg_train_loss_curve,
-        'val_loss_curve':    avg_val_loss_curve,
-        'train_acc_curve':   avg_train_acc_curve,
-        'val_acc_curve':     avg_val_acc_curve,
-        'cpu_usage':         avg_results.get('avg_cpu_usage', []),
-        'gpu_usage':         avg_results.get('avg_gpu_usage', []),
+    # per-epoch averages for plotting
+    per_fold = {
+        'train_loss':   [f['train_loss'] for f in folds_data],
+        'val_loss':     [f['val_loss']   for f in folds_data],
+        'train_acc':    [f['train_accuracy'] for f in folds_data],
+        'val_acc':      [f['val_accuracy']   for f in folds_data],
+    }
+    avg_curve = {
+        k: [sum(vals) / len(vals) for vals in zip(*v)]
+        for k, v in per_fold.items()
     }
 
+    return {
+        'name':                name,
+        'batch_size':          kwargs['batch_size'],
+        'learning_rate':       kwargs['learning_rate'],
+        'avg_train_loss':      float(np.mean(avg_curve['train_loss'])),
+        'avg_val_loss':        float(np.mean(avg_curve['val_loss'])),
+        'avg_train_accuracy':  float(np.mean(avg_curve['train_acc'])),
+        'avg_val_accuracy':    float(np.mean(avg_curve['val_acc'])),
+        'test_accuracy':       avg_results['avg_test_acc'],
+        'time':                avg_results.get('avg_time', avg_results.get('elapsed_time')),
+        # curves for plotting
+        'train_loss_curve':    avg_curve['train_loss'],
+        'val_loss_curve':      avg_curve['val_loss'],
+        'train_acc_curve':     avg_curve['train_acc'],
+        'val_acc_curve':       avg_curve['val_acc'],
+        'cpu_usage':           avg_results.get('avg_cpu_usage', []),
+        'gpu_usage':           avg_results.get('avg_gpu_usage', []),
+    }
+
+
 def save_test_data(data, filename):
-    pd.DataFrame(data).to_csv(filename, index=False,
-                              columns=[
-                                  'name', 'batch_size', 'learning_rate',
-                                  'avg_train_loss', 'avg_val_loss',
-                                  'avg_train_accuracy', 'avg_val_accuracy',
-                                  'test_accuracy', 'time'
-                              ])
+    """Save the summary table to CSV."""
+    pd.DataFrame(data).to_csv(
+        filename, index=False,
+        columns=[
+            'name', 'batch_size', 'learning_rate',
+            'avg_train_loss', 'avg_val_loss',
+            'avg_train_accuracy', 'avg_val_accuracy',
+            'test_accuracy', 'time'
+        ]
+    )
+
 
 def main(architecture):
-    print(f"Device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'}")
-    print(f"Using architecture: {architecture}")
-    print(f"Using subsample size: {test_config['subsample_size']}")
-    print(f"Using EMNIST type: {test_config['emnist_type']}")
-    print("Loading EMNIST dataset...")
-    full = datasets.EMNIST(root="../data", split=test_config["emnist_type"],
-                           train=True, download=True, transform=transform)
-    ds = get_subsample(full)
+    # parse CLI args
+    args = docopt(__doc__)
+    K   = int(args['--k-folds']     or test_config['k_folds'])
+    N   = int(args['--epochs']      or test_config['epochs'])
+    B   = int(args['--batch-size']  or test_config['train_batch_size'])
+    LR  = float(args['--lr']        or test_config['learning_rate'])
+    WD  = float(args['--weight-decay'] or test_config['weight_decay'])
+    PAT = int(args['--patience']    or test_config['early_stopping_patience'])
 
-    lr     = test_config['learning_rate']
-    epochs = test_config['epochs']
-    folds  = test_config['k_folds']
-    bs     = test_config['train_batch_size']
-    early_stopping_patience = test_config['early_stopping_patience']
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Device: {device}")
+    print(f"Architecture: {architecture}")
+    print(f"Config → folds: {K}, epochs: {N}, batch_size: {B}, lr: {LR}, wd: {WD}, patience: {PAT}")
+
+    # load and optionally subsample EMNIST
+    full = datasets.EMNIST(
+        root="../data",
+        split=test_config['emnist_type'],
+        train=True, download=True,
+        transform=transform
+    )
+    ds = get_subsample(full, test_config.get('subsample_size'))
 
     # 1) Optimizer Comparison
     optim_map = {
-        'Adam':    lambda p: torch.optim.Adam(p, lr=lr),
-        'SGD':     lambda p: torch.optim.SGD(p, lr=lr, momentum=0.9),
-        'RMSprop': lambda p: torch.optim.RMSprop(p, lr=lr)
+        'Adam':    lambda p: torch.optim.Adam(p, lr=LR, weight_decay=WD),
+        'SGD':     lambda p: torch.optim.SGD(p, lr=LR, momentum=0.9, weight_decay=WD),
+        'RMSprop': lambda p: torch.optim.RMSprop(p, lr=LR, weight_decay=WD)
     }
-    runs = [run_experiment(name, architecture, ds,
-                           k_folds=folds, epochs=epochs,
-                           batch_size=bs, learning_rate=lr,
-                           optimizer_fn=opt_fn,
-                           early_stopping_patience=early_stopping_patience)
-            for name, opt_fn in optim_map.items()]
+    runs = [
+        run_experiment(
+            name, architecture, ds,
+            k_folds=K, epochs=N, batch_size=B,
+            learning_rate=LR, optimizer_fn=opt_fn,
+            weight_decay=WD,
+            early_stopping_patience=PAT
+        )
+        for name, opt_fn in optim_map.items()
+    ]
     save_test_data(runs, '../test_data/optimizer_comparison.csv')
     plot_metrics(runs, 'Optimizer Comparison')
     plot_test_accuracy(runs, 'Optimizer: Test Accuracy Comparison')
     best_opt = max(runs, key=lambda r: r['test_accuracy'])['name']
-    best_optimizer_fn = optim_map[best_opt]
+    best_opt_fn = optim_map[best_opt]
     print(f"Best optimizer: {best_opt}")
 
     # 2) Scheduler Comparison
     sched_map = {
         'None':            {},
-        'StepLR':          {'scheduler_fn': lambda opt: torch.optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.1)},
-        'CosineAnnealing': {'scheduler_fn': lambda opt: torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)},
-        'OneCycle':        {'scheduler_fn': lambda opt: torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=epochs)}
+        'StepLR':          {'scheduler_fn': lambda o: torch.optim.lr_scheduler.StepLR(o, step_size=10, gamma=0.1)},
+        'CosineAnnealing': {'scheduler_fn': lambda o: torch.optim.lr_scheduler.CosineAnnealingLR(o, T_max=N)},
+        'OneCycle':        {'scheduler_fn': lambda o: torch.optim.lr_scheduler.OneCycleLR(o, max_lr=LR, total_steps=N)}
     }
-    runs = [run_experiment(name, architecture, ds,
-                           k_folds=folds, epochs=epochs,
-                           batch_size=bs, learning_rate=lr,
-                           optimizer_fn=best_optimizer_fn,
-                           early_stopping_patience=early_stopping_patience,
-                           **params)
-            for name, params in sched_map.items()]
+    runs = [
+        run_experiment(
+            name, architecture, ds,
+            k_folds=K, epochs=N, batch_size=B,
+            learning_rate=LR, optimizer_fn=best_opt_fn,
+            weight_decay=WD,
+            early_stopping_patience=PAT,
+            **params
+        )
+        for name, params in sched_map.items()
+    ]
     save_test_data(runs, '../test_data/scheduler_comparison.csv')
     plot_metrics(runs, 'Scheduler Comparison')
     plot_test_accuracy(runs, 'Scheduler: Test Accuracy Comparison')
     best_sched = max(runs, key=lambda r: r['test_accuracy'])['name']
-    best_scheduler_fn = sched_map[best_sched].get('scheduler_fn')
+    best_sched_fn = sched_map[best_sched].get('scheduler_fn')
     print(f"Best scheduler: {best_sched}")
 
     # 3) Regularization Comparison
     reg_map = {'No WD': 0.0, 'WD=1e-5': 1e-5, 'WD=1e-4': 1e-4, 'WD=1e-3': 1e-3}
-    runs = [run_experiment(name, architecture, ds,
-                           k_folds=folds, epochs=epochs,
-                           batch_size=bs, learning_rate=lr,
-                           optimizer_fn=best_optimizer_fn,
-                           scheduler_fn=best_scheduler_fn,
-                           weight_decay=wd,
-                           early_stopping_patience=early_stopping_patience)
-            for name, wd in reg_map.items()]
+    runs = [
+        run_experiment(
+            name, architecture, ds,
+            k_folds=K, epochs=N, batch_size=B,
+            learning_rate=LR, optimizer_fn=best_opt_fn,
+            scheduler_fn=best_sched_fn,
+            weight_decay=wd,
+            early_stopping_patience=PAT
+        )
+        for name, wd in reg_map.items()
+    ]
     save_test_data(runs, '../test_data/regularization_comparison.csv')
     plot_metrics(runs, 'Regularization Comparison')
     plot_test_accuracy(runs, 'Regularization: Test Accuracy Comparison')
     best_reg = max(runs, key=lambda r: r['test_accuracy'])['name']
-    best_weight_decay = reg_map[best_reg]
+    best_wd  = reg_map[best_reg]
     print(f"Best weight decay: {best_reg}")
 
     # 4) Batch Size Comparison
@@ -164,33 +195,31 @@ def main(architecture):
     runs_bs = [
         run_experiment(
             f"BS={b}", architecture, ds,
-            k_folds=folds, epochs=epochs,
-            batch_size=b, learning_rate=lr,
-            optimizer_fn=best_optimizer_fn,
-            scheduler_fn=best_scheduler_fn,
-            weight_decay=best_weight_decay,
-            early_stopping_patience=early_stopping_patience
+            k_folds=K, epochs=N, batch_size=b,
+            learning_rate=LR, optimizer_fn=best_opt_fn,
+            scheduler_fn=best_sched_fn,
+            weight_decay=best_wd,
+            early_stopping_patience=PAT
         )
         for b in batch_sizes
     ]
     save_test_data(runs_bs, '../test_data/batch_size_comparison.csv')
     plot_metrics(runs_bs, 'Batch Size Comparison')
-    plot_test_accuracy(runs_bs, 'Batch Size: Test Accuracy Comparison')
     plot_time(runs_bs, 'Batch Size: Training Time')
+    plot_test_accuracy(runs_bs, 'Batch Size: Test Accuracy Comparison')
     best_bs = max(runs_bs, key=lambda r: r['test_accuracy'])['batch_size']
     print(f"Best batch size: {best_bs}")
 
-    # 5) Learning‐Rate Grid at Best Batch Size
+    # 5) Learning-Rate Grid at Best Batch Size
     lr_grid = [1e-3, 1e-4, 1e-5]
     runs_lr = [
         run_experiment(
             f"BS={best_bs}, LR={l}", architecture, ds,
-            k_folds=folds, epochs=epochs,
-            batch_size=best_bs, learning_rate=l,
-            optimizer_fn=best_optimizer_fn,
-            scheduler_fn=best_scheduler_fn,
-            weight_decay=best_weight_decay,
-            early_stopping_patience=early_stopping_patience
+            k_folds=K, epochs=N, batch_size=best_bs,
+            learning_rate=l, optimizer_fn=best_opt_fn,
+            scheduler_fn=best_sched_fn,
+            weight_decay=best_wd,
+            early_stopping_patience=PAT
         )
         for l in lr_grid
     ]
@@ -198,28 +227,30 @@ def main(architecture):
     plot_metrics(runs_lr, f'LR Grid @ BS={best_bs}')
     plot_test_accuracy(runs_lr, f'LR Grid @ BS={best_bs}: Test Accuracy Comparison')
     best_lr = max(runs_lr, key=lambda r: r['test_accuracy'])['learning_rate']
-    print(f"Best learning rate at BS={best_bs}: LR={best_lr}")
+    print(f"Best learning rate: {best_lr}")
 
-    print(f"Best config: {best_opt}, {best_sched}, {best_reg}, BS={best_bs}, LR={best_lr}")
     # 6) Architecture Comparison
     archs = [
         'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256',
-        'EmnistCNN_8_32_64', 'EmnistCNN_16_64',
-        'EmnistCNN_32_128', 'GoogleNet', 'ResNet18'
+        'EmnistCNN_8_32_64',  'EmnistCNN_16_64',
+        'EmnistCNN_32_128',   'GoogleNet', 'ResNet18'
     ]
-    runs = [run_experiment(arch, arch, ds,
-                           k_folds=folds, epochs=epochs,
-                           batch_size=best_bs,
-                           learning_rate=best_lr,
-                           optimizer_fn=best_optimizer_fn,
-                           scheduler_fn=best_scheduler_fn,
-                           weight_decay=best_weight_decay,
-                           early_stopping_patience=early_stopping_patience)
-            for arch in archs]
+    runs = [
+        run_experiment(
+            arch, arch, ds,
+            k_folds=K, epochs=N, batch_size=best_bs,
+            learning_rate=best_lr, optimizer_fn=best_opt_fn,
+            scheduler_fn=best_sched_fn,
+            weight_decay=best_wd,
+            early_stopping_patience=PAT
+        )
+        for arch in archs
+    ]
     save_test_data(runs, '../test_data/architecture_comparison.csv')
     plot_metrics(runs, 'Architecture Comparison')
     plot_time(runs, 'Architecture: Training Time')
     plot_test_accuracy(runs, 'Architecture: Test Accuracy Comparison')
+
 
 if __name__ == "__main__":
     args = docopt(__doc__)
