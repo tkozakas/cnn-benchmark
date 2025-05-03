@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-mkdir -p ../logs
+mkdir -p logs
 
 # follow_logs.sh
 if [[ -z "$1" ]]; then
