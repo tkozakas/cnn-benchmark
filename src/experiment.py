@@ -25,10 +25,10 @@ import torch
 from docopt import docopt
 from torchvision import datasets
 
-from src.config import test_config
-from src.model import get_model
-from src.train import train, transform
-from src.visualise import plot_metrics, plot_test_accuracy, plot_time
+from config import test_config
+from model import get_model
+from train import train, transform
+from visualise import plot_metrics, plot_test_accuracy, plot_time
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)

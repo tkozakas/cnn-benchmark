@@ -33,9 +33,9 @@ from torch.backends import cudnn
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
-from src.config import train_config, model_config
-from src.model import get_model, save_model, load_model
-from src.visualise import (
+from config import train_config, model_config
+from model import get_model, save_model, load_model
+from visualise import (
     plot_aggregated_learning_curves,
     plot_confusion_matrix
 )
