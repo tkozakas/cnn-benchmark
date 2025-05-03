@@ -1,6 +1,7 @@
 """
 Usage:
      experiment.py [--architecture=ARCH]
+                   [--emnist-type=TYPE]
                    [--device=DEVICE]
                    [--cpu-workers=NUM]
                    [--subsample-size=S]
@@ -26,13 +27,13 @@ Options:
     --weight-decay=WD       Weight decay (L2)               [default: 0.0001].
     --patience=P            Early-stop patience             [default: 5].
 """
-
 import os
 import warnings
 
 import numpy as np
 import pandas as pd
 import torch
+from docopt import docopt
 from torchvision import datasets
 
 from src.utility import parse_args, get_subsample
@@ -98,9 +99,8 @@ def save_test_data(data, filename):
 
 
 def main():
-    ARCHITECTURE, B, CPU_WORKERS, DEVICE, EMNIST_TYPE, K, LR, N, PAT, SUBSAMPLE_SIZE, WD = parse_args()
-
-    print(f"Config → folds: {K}, epochs: {N}, batch_size: {B}, lr: {LR}, wd: {WD}, patience: {PAT}")
+    args = docopt(__doc__)
+    ARCHITECTURE, B, CPU_WORKERS, DEVICE, EMNIST_TYPE, K, LR, N, PAT, SUBSAMPLE_SIZE, WD = parse_args(args)
 
     full = datasets.EMNIST(
         root="../data",

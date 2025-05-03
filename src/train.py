@@ -1,6 +1,7 @@
 """
 Usage:
     train.py [--architecture=ARCH]
+             [--emnist-type=TYPE]
              [--device=DEVICE]
              [--cpu-workers=NUM]
              [--subsample-size=S]
@@ -26,7 +27,6 @@ Options:
     --weight-decay=WD       Weight decay (L2) [default: 0.0001].
     --patience=P            Early-stop patience [default: 5].
 """
-
 import re
 import subprocess
 import time
@@ -35,6 +35,7 @@ import warnings
 import numpy as np
 import psutil
 import torch
+from docopt import docopt
 from sklearn.exceptions import UndefinedMetricWarning
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
 from sklearn.model_selection import KFold
@@ -44,8 +45,8 @@ from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
 from config import train_config, model_config
-from model import get_model, save_model, load_model, get_subsample
-from src.utility import parse_args
+from model import get_model, save_model, load_model
+from src.utility import parse_args, get_subsample
 from visualise import (
     plot_aggregated_learning_curves,
     plot_confusion_matrix
@@ -292,9 +293,8 @@ def train(architecture, dataset, model_fn,
 
 
 def main():
-    ARCHITECTURE, B, CPU_WORKERS, DEVICE, EMNIST_TYPE, K, LR, N, PAT, SUBSAMPLE_SIZE, WD = parse_args()
-
-    print(f"Using K={K}, epochs={N}, batch_size={B}, lr={LR}, wd={WD}, patience={PAT}")
+    args = docopt(__doc__)
+    ARCHITECTURE, B, CPU_WORKERS, DEVICE, EMNIST_TYPE, K, LR, N, PAT, SUBSAMPLE_SIZE, WD = parse_args(args)
 
     full = datasets.EMNIST(
         root="../data",
