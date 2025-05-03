@@ -78,6 +78,15 @@ python experiment.py \
   --weight-decay 0.0001 \
   --patience 5
 ```
+## Predict image with trained model
+```bash
+python predict.py \
+  path/to/best_model.pth \
+  path/to/input_image.png \
+  --device cuda \
+  --architecture EmnistCNN_32_128_256 \
+  --emnist-type balanced
+```
 
 ## Train on VU supercomputer
 1. Connect to the supercomputer
