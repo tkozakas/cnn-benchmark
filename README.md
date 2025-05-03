@@ -27,16 +27,14 @@ source .venv/bin/activate
 ```
 
 # Install dependencies
+## For AMD GPUs
 ```bash
-    uv pip install -r requirements.txt
+    uv pip install -r requirements-amd.txt
+    # uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
 ```
-## Install PyTorch with ROCm support (AMD GPUs)
+## Other
 ```bash
-uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
-```
-## Install PyTorch with CUDA support (NVIDIA GPUs)
-```bash
-uv pip install torch torchvision torchaudio
+uv pip install -r requirements.txt
 ```
 
 # Usage
