@@ -3,7 +3,7 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-from src.config import model_config
+from config import model_config
 
 
 class EmnistCNN(nn.Module):

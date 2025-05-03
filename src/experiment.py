@@ -1,20 +1,31 @@
 """
 Usage:
-    experiment.py [--architecture=ARCH]
-                  [--k-folds=K] [--epochs=N] [--batch-size=B]
-                  [--lr=LR] [--weight-decay=WD] [--patience=P]
+     experiment.py [--architecture=ARCH]
+                   [--device=DEVICE]
+                   [--cpu-workers=NUM]
+                   [--subsample-size=S]
+                   [--k-folds=K]
+                   [--epochs=N]
+                   [--batch-size=B]
+                   [--eval-batch-size=E]
+                   [--lr=LR]
+                   [--weight-decay=WD]
+                   [--patience=P]
 
 Options:
     -h --help               Show this help message.
-    --architecture=ARCH     Specify the architecture to use
-                            [default: EmnistCNN_16_64_128].
-    --k-folds=K             Number of CV folds              [default: {k_folds}].
-    --epochs=N              Max epochs per fold             [default: {epochs}].
-    --batch-size=B          Training batch size             [default: {train_batch_size}].
-    --lr=LR                 Learning rate                   [default: {learning_rate}].
-    --weight-decay=WD       Weight decay (L2)               [default: {weight_decay}].
-    --patience=P            Early-stop patience             [default: {early_stopping_patience}].
-""".format(**__import__('config', fromlist=['test_config']).test_config)
+    --emnist-type=TYPE      EMNIST type (letters, digits, balanced) [default: balanced].
+    --device=DEVICE         Device to use for training (cpu or cuda) [default: cpu].
+    --cpu-worker=NUM        Number of CPU workers for data loading [default: 4].
+    --architecture=ARCH     Model architecture [default: EmnistCNN_32_128_256].
+    --subsample-size=S      Subsample size for training set [default: 10000].
+    --k-folds=K             Number of CV folds              [default: 3].
+    --epochs=N              Max epochs per fold             [default: 20].
+    --batch-size=B          Training batch size             [default: 128].
+    --lr=LR                 Learning rate                   [default: 0.001].
+    --weight-decay=WD       Weight decay (L2)               [default: 0.0001].
+    --patience=P            Early-stop patience             [default: 5].
+"""
 
 import os
 import warnings
@@ -101,26 +112,29 @@ def save_test_data(data, filename):
 def main(architecture):
     # parse CLI args
     args = docopt(__doc__)
-    K   = int(args['--k-folds']     or test_config['k_folds'])
-    N   = int(args['--epochs']      or test_config['epochs'])
-    B   = int(args['--batch-size']  or test_config['train_batch_size'])
-    LR  = float(args['--lr']        or test_config['learning_rate'])
-    WD  = float(args['--weight-decay'] or test_config['weight_decay'])
-    PAT = int(args['--patience']    or test_config['early_stopping_patience'])
+    K = int(args['--k-folds'])
+    N = int(args['--epochs'])
+    B = int(args['--batch-size'])
+    LR = float(args['--lr'])
+    WD = float(args['--weight-decay'])
+    PAT = int(args['--patience'])
+    CPU_WORKERS = int(args['--cpu-worker'])
+    DEVICE = args['--device']
+    EMNIST_TYPE = args['--emnist-type']
+    SUBSAMPLE_SIZE = int(args['--subsample-size'])
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}")
+    print(f"Device: {DEVICE}")
     print(f"Architecture: {architecture}")
     print(f"Config → folds: {K}, epochs: {N}, batch_size: {B}, lr: {LR}, wd: {WD}, patience: {PAT}")
 
     # load and optionally subsample EMNIST
     full = datasets.EMNIST(
         root="../data",
-        split=test_config['emnist_type'],
+        split=EMNIST_TYPE,
         train=True, download=True,
         transform=transform
     )
-    ds = get_subsample(full, test_config.get('subsample_size'))
+    ds = get_subsample(full, SUBSAMPLE_SIZE)
 
     # 1) Optimizer Comparison
     optim_map = {
@@ -134,7 +148,8 @@ def main(architecture):
             k_folds=K, epochs=N, batch_size=B,
             learning_rate=LR, optimizer_fn=opt_fn,
             weight_decay=WD,
-            early_stopping_patience=PAT
+            early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS,
         )
         for name, opt_fn in optim_map.items()
     ]
@@ -159,6 +174,7 @@ def main(architecture):
             learning_rate=LR, optimizer_fn=best_opt_fn,
             weight_decay=WD,
             early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS,
             **params
         )
         for name, params in sched_map.items()
@@ -179,7 +195,8 @@ def main(architecture):
             learning_rate=LR, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
             weight_decay=wd,
-            early_stopping_patience=PAT
+            early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS
         )
         for name, wd in reg_map.items()
     ]
@@ -199,7 +216,8 @@ def main(architecture):
             learning_rate=LR, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
             weight_decay=best_wd,
-            early_stopping_patience=PAT
+            early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS
         )
         for b in batch_sizes
     ]
@@ -219,7 +237,8 @@ def main(architecture):
             learning_rate=l, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
             weight_decay=best_wd,
-            early_stopping_patience=PAT
+            early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS
         )
         for l in lr_grid
     ]
@@ -242,7 +261,8 @@ def main(architecture):
             learning_rate=best_lr, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
             weight_decay=best_wd,
-            early_stopping_patience=PAT
+            early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS
         )
         for arch in archs
     ]

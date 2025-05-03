@@ -52,21 +52,29 @@ The defaults are set in the `config.py` file.'
 ```bash
     python train.py \
       --architecture EmnistCNN_32_128_256 \
+      --device cuda \
+      --cpu-workers 8 \
       --k-folds 5 \
-      --epochs 50 \
+      --epochs 30 \
       --batch-size 128 \
-      --lr 0.001 \
+      --eval-batch-size 256 \
+      --lr 0.0005 \
       --weight-decay 0.0001 \
       --patience 5
+
 ```
 
 ## Experiment on finding the best hyperparameters
 ```bash
     python experiment.py \
-      --architecture ResNet18 \
+      --architecture EmnistCNN_32_128_256 \
+      --device cuda \
+      --cpu-workers 8 \
+      --subsample-size 10000 \
       --k-folds 3 \
-      --epochs 25 \
+      --epochs 20 \
       --batch-size 128 \
+      --eval-batch-size 256 \
       --lr 0.0005 \
       --weight-decay 0.0001 \
       --patience 5

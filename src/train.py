@@ -1,20 +1,31 @@
 """
 Usage:
     train.py [--architecture=ARCH]
-             [--k-folds=K] [--epochs=N] [--batch-size=B]
-             [--lr=LR] [--weight-decay=WD] [--patience=P]
+             [--device=DEVICE]
+             [--cpu-workers=NUM]
+             [--subsample-size=S]
+             [--k-folds=K]
+             [--epochs=N]
+             [--batch-size=B]
+             [--eval-batch-size=E]
+             [--lr=LR]
+             [--weight-decay=WD]
+             [--patience=P]
 
 Options:
     -h --help               Show this help message.
-    --architecture=ARCH     Model architecture to use
-                            [default: EmnistCNN_16_64_128].
-    --k-folds=K             Number of CV folds         [default: {k_folds}].
-    --epochs=N              Max epochs per fold        [default: {epochs}].
-    --batch-size=B          Training batch size        [default: {train_batch_size}].
-    --lr=LR                 Learning rate              [default: {learning_rate}].
-    --weight-decay=WD       Weight decay (L2)          [default: {weight_decay}].
-    --patience=P            EarlyStop patience         [default: {early_stopping_patience}].
-""".format(**__import__('config', fromlist=['train_config']).train_config)
+    --architecture=ARCH     Model architecture [default: EmnistCNN_32_128_256].
+    --emnist-type=TYPE      EMNIST type (letters, digits, balanced) [default: balanced].
+    --device=DEVICE         Device to use (cpu or cuda) [default: cpu].
+    --cpu-workers=NUM       Number of CPU workers for data loading [default: 4].
+    --subsample-size=S      Subsample size for training set [default: None].
+    --k-folds=K             Number of CV folds [default: 5].
+    --epochs=N              Max epochs per fold [default: 20].
+    --batch-size=B          Training batch size [default: 128].
+    --lr=LR                 Learning rate [default: 0.001].
+    --weight-decay=WD       Weight decay (L2) [default: 0.0001].
+    --patience=P            Early-stop patience [default: 5].
+"""
 
 import re
 import subprocess
@@ -172,7 +183,8 @@ def train(architecture, dataset, model_fn,
           optimizer_fn=None,
           scheduler_fn=None,
           criterion=None,
-          early_stopping_patience=None):
+          early_stopping_patience=None,
+          cpu_workers=4):
     """Run k-fold CV, returning per-fold histories and aggregated averages."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     criterion = criterion or nn.CrossEntropyLoss()
@@ -188,7 +200,7 @@ def train(architecture, dataset, model_fn,
         fold_start = time.time()
         train_loader, val_loader, test_loader = get_data_loaders(
             dataset, train_idx, test_idx,
-            batch_size, train_config['cpu_workers']
+            batch_size, cpu_workers
         )
         model, optimizer, scheduler = init_model_optimizer_scheduler(
             model_fn, learning_rate, weight_decay,
@@ -243,7 +255,7 @@ def train(architecture, dataset, model_fn,
         tloss, tacc, tp, fp, prec, rec, f1 = evaluate_and_metrics(
             model, test_loader, criterion, device
         )
-        save_model(model, f"{architecture}_fold{fold}_best.pth")
+        save_model(model, f"{architecture}_fold{fold}.pth")
 
         all_results.append({
             'fold': fold,
@@ -280,30 +292,35 @@ def train(architecture, dataset, model_fn,
 def main(architecture):
     args = docopt(__doc__)
     # override or use defaults
-    K = int(args['--k-folds'] or train_config['k_folds'])
-    N = int(args['--epochs'] or train_config['epochs'])
-    B = int(args['--batch-size'] or train_config['train_batch_size'])
-    LR = float(args['--lr'] or train_config['learning_rate'])
-    WD = float(args['--weight-decay'] or train_config['weight_decay'])
-    PAT = int(args['--patience'] or train_config['early_stopping_patience'])
+    K = int(args['--k-folds'])
+    N = int(args['--epochs'])
+    B = int(args['--batch-size'])
+    LR = float(args['--lr'])
+    WD = float(args['--weight-decay'])
+    PAT = int(args['--patience'])
+    CPU_WORKERS = int(args['--cpu-worker'])
+    DEVICE = args['--device']
+    EMNIST_TYPE = args['--emnist-type']
+    SUBSAMPLE_SIZE = int(args['--subsample-size']) if args['--subsample-size'] else None
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}")
+    torch.device(DEVICE)
+
+    print(f"Device: {DEVICE}")
     print(f"Architecture: {architecture}")
     print(f"Using K={K}, epochs={N}, batch_size={B}, lr={LR}, wd={WD}, patience={PAT}")
 
     # load dataset
     full = datasets.EMNIST(
         root="../data",
-        split=train_config['emnist_type'],
+        split=EMNIST_TYPE,
         train=True,
         download=True,
         transform=transform
     )
-    if train_config.get('subsample_size'):
+    if SUBSAMPLE_SIZE:
         full, _ = torch.utils.data.random_split(
             full,
-            [train_config['subsample_size'], len(full) - train_config['subsample_size']]
+            [SUBSAMPLE_SIZE, len(full) - SUBSAMPLE_SIZE]
         )
 
     # train + CV
@@ -317,8 +334,9 @@ def main(architecture):
         learning_rate=LR,
         weight_decay=WD,
         early_stopping_patience=PAT,
+        cpu_workers=CPU_WORKERS,
         optimizer_fn=optim.Adam,
-        scheduler_fn=None
+        scheduler_fn=None,
     )
 
     print("\nPlotting results...")
@@ -333,21 +351,21 @@ def main(architecture):
     test_loader = DataLoader(
         full,
         batch_size=B,
-        num_workers=train_config['cpu_workers'],
+        num_workers=CPU_WORKERS,
         shuffle=False,
         pin_memory=torch.cuda.is_available(),
         persistent_workers=True
     )
-    model = get_model(architecture).to(device)
+    model = get_model(architecture).to(DEVICE)
     model = load_model(
-        model, f"{architecture}_fold{K}_best.pth"
+        model, f"{architecture}_fold{K}.pth"
     )
     plot_confusion_matrix(
-        model, test_loader, device,
+        model, test_loader, DEVICE,
         classes=list(range(model_config[architecture]["num_classes"]))
     )
     test_loss, test_acc, tp, fp, precision, sensitivity, f1_score = evaluate_and_metrics(
-        model, test_loader, nn.CrossEntropyLoss(), device
+        model, test_loader, nn.CrossEntropyLoss(), DEVICE
     )
     print("\nTest results:")
     print(f"Test Loss: {test_loss:.4f}")

@@ -1,35 +1,7 @@
-test_config = {
-    'emnist_type': 'balanced',
-    'subsample_size': 10000,
-    'epochs': 5,
-    'val_split': 0.2,
-    'k_folds': 5,
-
-    'train_batch_size': 512,
-    'eval_batch_size': 128,
-    'learning_rate': 5e-4,
-    'weight_decay': 1e-4,
-    'cpu_workers': 6,
-
-    'early_stopping_patience': 10
-}
-
 train_config = {
-    'emnist_type':     'balanced',
-    'subsample_size': None,
-    'epochs': 30,
-    'val_split':       0.2,
-    'k_folds':         5,
     'valid_interval':  1,
     'show_interval':   1,
-
-    'train_batch_size': 512,
-    'eval_batch_size': 128,
-    'learning_rate':   5e-4,
-    'weight_decay':    1e-4,
-    'cpu_workers': 6,
-
-    'early_stopping_patience': 5
+    'val_split':     0.2,
 }
 
 # "num_classes": # letters = 26, digits = 10, balanced = 47
