@@ -13,8 +13,13 @@ TODO
 
 ## Usage
 ```bash
-# Activate virtual environment
+# Activate virtual environment 
+conda create -n ocr-benchmark python=3.9.12
 conda activate ocr-benchmark
+
+# Install dependencies
+conda install --file requirements.txt
+
 # Train models
 python train.py
 # Evaluate models
@@ -41,7 +46,19 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 5. Architecture comparison (Emnist with 2 layers or 3 or RNN or RCNN (existing))
 
 # Train on VU supercomputer
+1. Connect to the supercomputer
 ```bash
 ssh mifvu_username@uosis.mif.vu.lt
 ssh hpc
+
+srun \
+  --partition=gpu \
+  --gres=gpu:1 \
+  --ntasks=1 \
+  --cpus-per-task=8 \
+  --mem=16G \
+  --time=02:00:00 \
+  --pty bash
+  
+git clone https://github.com/tkozakas/ocr-models.git
 ```
