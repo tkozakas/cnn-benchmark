@@ -81,7 +81,7 @@ python predict.py \
   --emnist-type balanced
 ```
 
-## Train on VU supercomputer
+# Train on VU supercomputer
 ```bash
 ssh mifvu_username@uosis.mif.vu.lt
 ssh hpc
