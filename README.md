@@ -85,10 +85,8 @@ python predict.py \
 ```bash
 ssh mifvu_username@uosis.mif.vu.lt
 ssh hpc
-git clone https://github.com/tkozakas/ocr-models
-cd ocr-models
-chmod +x follow_logs.sh
-chmod +x run_train.sh
+git clone https://github.com/tkozakas/ocr-models && cd ocr-models
+chmod +x run_train.sh follow_logs.sh
 
 # Run the training script
 ./follow_logs.sh $(sbatch --parsable run_train.sh)
