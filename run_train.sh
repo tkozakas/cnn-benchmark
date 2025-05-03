@@ -17,7 +17,6 @@ uv venv --python 3.12
 source .venv/bin/activate
 
 uv pip install -r requirements.txt
-uv pip install torch torchvision torchaudio
 
 # run training
 cd src
