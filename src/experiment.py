@@ -8,7 +8,6 @@ Usage:
                    [--k-folds=K]
                    [--epochs=N]
                    [--batch-size=B]
-                   [--eval-batch-size=E]
                    [--lr=LR]
                    [--weight-decay=WD]
                    [--patience=P]
@@ -36,7 +35,7 @@ import torch
 from docopt import docopt
 from torchvision import datasets
 
-from src.utility import parse_args, get_subsample
+from utility import parse_args, get_subsample
 from train import train, transform
 from visualise import plot_metrics, plot_test_accuracy, plot_time
 

@@ -35,7 +35,10 @@ def parse_args(args):
     print(f"EMNIST split: {EMNIST_TYPE}")
     print(f"Subsample:    {SUBSAMPLE_SIZE!r}")
 
-    print(f"Config → Using K={K} folds, "
+    print(f"Config → "
+          f"EMNIST split: {EMNIST_TYPE}, "
+          f"Subsample size: {SUBSAMPLE_SIZE}, "
+          f"Using K={K} folds, "
           f"N={N} epochs, "
           f"B={B} batch size, "
           f"LR={LR} learning rate, "

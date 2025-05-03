@@ -8,7 +8,6 @@ Usage:
              [--k-folds=K]
              [--epochs=N]
              [--batch-size=B]
-             [--eval-batch-size=E]
              [--lr=LR]
              [--weight-decay=WD]
              [--patience=P]
@@ -46,7 +45,7 @@ from torchvision import datasets, transforms
 
 from config import train_config, model_config
 from model import get_model, save_model, load_model
-from src.utility import parse_args, get_subsample
+from utility import parse_args, get_subsample
 from visualise import (
     plot_aggregated_learning_curves,
     plot_confusion_matrix
