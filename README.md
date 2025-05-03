@@ -44,7 +44,6 @@ EMNIST
     uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.3
 ```
 
-
 # Usage
 ```bash
     # Train models
@@ -67,6 +66,4 @@ EMNIST
       --mem=16G \
       --time=02:00:00 \
       --pty bash
-      
-    git clone https://github.com/tkozakas/ocr-models.git
 ```

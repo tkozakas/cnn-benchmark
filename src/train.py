@@ -23,7 +23,7 @@ from torch.backends import cudnn
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 
-from src.config import train_config, model_config
+from src.config import train_config, model_config, test_config
 from src.model import get_model, save_model, load_model
 from src.visualise import plot_aggregated_learning_curves, plot_confusion_matrix
 
@@ -228,6 +228,12 @@ def k_fold_cross_validation(architecture, dataset, model_fn,
     return all_results, avg_results
 
 def main(architecture):
+    print(f"Device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'}")
+    print(f"Using architecture: {architecture}")
+    print(f"Using subsample size: {test_config['subsample_size']}")
+    print(f"Using EMNIST type: {test_config['emnist_type']}")
+    print("Loading EMNIST dataset...")
+
     full = datasets.EMNIST(
         root="../data", split=train_config['emnist_type'],
         train=True, download=True, transform=transform

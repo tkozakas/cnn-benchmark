@@ -87,6 +87,10 @@ def save_test_data(data, filename):
                               ])
 
 def main(architecture):
+    print(f"Device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'}")
+    print(f"Using architecture: {architecture}")
+    print(f"Using subsample size: {test_config['subsample_size']}")
+    print(f"Using EMNIST type: {test_config['emnist_type']}")
     print("Loading EMNIST dataset...")
     full = datasets.EMNIST(root="../data", split=test_config["emnist_type"],
                            train=True, download=True, transform=transform)
