@@ -34,7 +34,6 @@ pyparsing==3.2.3
 pysocks==1.7.1
 pytesseract==0.3.13
 python-dateutil==2.9.0.post0
-pytorch-triton-rocm==3.3.0
 pytz==2025.2
 rich==14.0.0
 scikit-learn==1.6.1
@@ -44,9 +43,6 @@ setuptools==70.2.0
 six==1.17.0
 sympy==1.13.3
 threadpoolctl==3.6.0
-torch==2.7.0+rocm6.3
-torchaudio==2.7.0+rocm6.3
-torchvision==0.22.0+rocm6.3
 typing-extensions==4.12.2
 tzdata==2025.2
 utils==1.0.2
