@@ -30,18 +30,13 @@ source .venv/bin/activate
 ```bash
     uv pip install -r requirements.txt
 ```
-
-# Setup
-## Seting up ROCm on Fedora 41 (AMD GPU)
-! Note: If you have an NVIDIA GPU, you should use CUDA instead of ROCm.
+## Install PyTorch with ROCm support (AMD GPUs)
 ```bash
-sudo usermod -a -G video $LOGNAME
-sudo dnf install rocminfo rocm-opencl rocm-clinfo
-echo “export HSA_OVERRIDE_GFX_VERSION=10.3.0” >> ~/.bashrc
-source ~/.bashrc # or zshrc
-
-# Install PyTorch with ROCm support (in a virtual environment)
 uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+```
+## Install PyTorch with CUDA support (NVIDIA GPUs)
+```bash
+uv pip install torch torchvision torchaudio
 ```
 
 # Usage

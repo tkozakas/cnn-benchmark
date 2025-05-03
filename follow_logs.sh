@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+mkdir -p logs
+
 # follow_logs.sh
 if [[ -z "$1" ]]; then
   echo "Usage: $0 <jobid>"
