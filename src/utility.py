@@ -23,7 +23,6 @@ def parse_args(args):
     DEVICE       = args['--device']
     EMNIST_TYPE  = args['--emnist-type']
 
-    # Safely handle the “None” default
     raw_ss = args['--subsample-size']
     if raw_ss is None or raw_ss.lower() == 'none' or raw_ss == '':
         SUBSAMPLE_SIZE = None
