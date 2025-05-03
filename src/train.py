@@ -98,7 +98,7 @@ def get_data_loaders(dataset, train_idx, test_idx, batch_size, num_workers):
     train_data, val_data = torch.utils.data.random_split(
         train_subset, [train_size, val_size]
     )
-    loader_args = dict(batch_size=batch_size, pin_memory=True,
+    loader_args = dict(batch_size=batch_size, pin_memory=True if torch.cuda.is_available() else False,
                        persistent_workers=True, num_workers=num_workers, prefetch_factor=2)
     train_loader = DataLoader(train_data, shuffle=True, **loader_args)
     val_loader   = DataLoader(val_data,   shuffle=False, **loader_args)

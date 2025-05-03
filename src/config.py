@@ -4,8 +4,6 @@ test_config = {
     'epochs': 5,
     'val_split': 0.2,
     'k_folds': 5,
-    'valid_interval': 1,
-    'show_interval': 1,
 
     'train_batch_size': 512,
     'eval_batch_size': 128,

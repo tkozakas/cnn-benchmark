@@ -8,7 +8,6 @@ Options:
 import os
 import warnings
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
@@ -18,6 +17,7 @@ from torchvision import datasets
 from src.config import test_config
 from src.model import get_model
 from src.train import k_fold_cross_validation, transform
+from src.visualise import plot_metrics, plot_test_accuracy, plot_time
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
@@ -30,57 +30,6 @@ def get_subsample(full_dataset):
             [subsample_size, len(full_dataset) - subsample_size]
         )
     return full_dataset
-
-def plot_metrics(runs, title):
-    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-    ax00, ax01, ax10, ax11 = axes.flatten()
-    for run in runs:
-        epochs = range(1, len(run['train_loss_curve']) + 1)
-        ax00.plot(epochs, run['train_loss_curve'], label=run['name'])
-        ax01.plot(epochs, run['val_loss_curve'],   label=run['name'])
-        ax10.plot(epochs, run['train_acc_curve'],  label=run['name'])
-        ax11.plot(epochs, run['val_acc_curve'],    label=run['name'])
-    ax00.set_title('Train Loss')
-    ax01.set_title('Validation Loss')
-    ax10.set_title('Train Accuracy')
-    ax11.set_title('Validation Accuracy')
-    ax00.set_ylabel('Loss')
-    ax01.set_ylabel('Loss')
-    ax10.set_ylabel('Accuracy')
-    ax11.set_ylabel('Accuracy')
-    for ax in [ax00, ax01, ax10, ax11]:
-        ax.set_xlabel('Epoch')
-        ax.grid(True)
-        ax.legend(fontsize='small')
-    fig.suptitle(title)
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.show()
-
-
-def plot_time(runs, title):
-    names = [r['name'] for r in runs]
-    times = [r['time'] for r in runs]
-    plt.figure(figsize=(8, 4))
-    plt.bar(names, times)
-    plt.xticks(rotation=45, ha='right')
-    plt.title(title)
-    plt.xlabel('Configuration')
-    plt.ylabel('Average Training Time (s)')
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_test_accuracy(runs, title):
-    names = [r['name'] for r in runs]
-    accs  = [r['test_accuracy'] for r in runs]
-    plt.figure(figsize=(8, 4))
-    plt.bar(names, accs)
-    plt.xticks(rotation=45, ha='right')
-    plt.title(title)
-    plt.xlabel('Configuration')
-    plt.ylabel('Average Test Accuracy')
-    plt.tight_layout()
-    plt.show()
 
 
 def run_experiment(name, architecture, dataset, **kwargs):

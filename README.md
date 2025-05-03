@@ -21,8 +21,8 @@ EMNIST
     curl -LsSf https://astral.sh/uv/install.sh | sh
     source $HOME/.local/bin/env
     
-    uv python install 3.13
-    uv venv --path .venv --python uv://3.13
+    uv python install 3.9
+    uv venv --python 3.9
     source .venv/bin/activate
     uv pip install -r requirements.txt
 ```
@@ -30,7 +30,7 @@ EMNIST
 # Setup
 ## Install dependencies
 ```bash
-pip install -r requirements.txt
+    pip install -r requirements.txt
 ```
 ## Seting up ROCm on Fedora 41 (AMD GPU)
 ! Note: If you have an NVIDIA GPU, you should use CUDA instead of ROCm.
@@ -41,7 +41,7 @@ pip install -r requirements.txt
     source ~/.bashrc # or zshrc
     
     # Install PyTorch with ROCm support (in a virtual environment)
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+    uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.3
 ```
 
 
