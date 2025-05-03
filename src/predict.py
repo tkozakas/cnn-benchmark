@@ -24,23 +24,17 @@ from docopt import docopt
 from matplotlib import pyplot as plt
 from torchvision import transforms, datasets
 
-from src.config import train_config
-from src.model import get_model
+from config import train_config
+from model import get_model
+from utility import get_transforms
 
-transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=3),
-    transforms.Resize((28, 28)),
-    transforms.RandomRotation(15),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
+transform = get_transforms()
 
 def load_model(architecture, model_path, device):
     model = get_model(architecture).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     return model
-
 
 def preprocess_image(image):
     return transform(image)

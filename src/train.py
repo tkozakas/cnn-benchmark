@@ -45,6 +45,7 @@ from torchvision import datasets, transforms
 
 from config import train_config, model_config
 from model import get_model, save_model, load_model
+from utility import get_transforms
 from utility import parse_args, get_subsample
 from visualise import (
     plot_aggregated_learning_curves,
@@ -56,13 +57,7 @@ warnings.filterwarnings("ignore", message=".*hipBLASLt.*", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 cudnn.benchmark = True
 
-transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=3),
-    transforms.Resize((28, 28)),
-    transforms.RandomRotation(15),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
+transform = get_transforms()
 
 def get_gpu_usage_percent():
     """Return GPU utilization percent for NVIDIA or AMD/ROCm."""

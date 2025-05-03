@@ -1,4 +1,14 @@
 import torch
+from torchvision import transforms
+
+def get_transforms():
+    return transforms.Compose([
+        transforms.Grayscale(num_output_channels=3),
+        transforms.Resize((28, 28)),
+        transforms.RandomRotation(15),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
 
 def get_subsample(full_dataset, subsample_size):
     """Optionally subsample the dataset."""

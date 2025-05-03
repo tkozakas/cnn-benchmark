@@ -35,6 +35,7 @@ import torch
 from docopt import docopt
 from torchvision import datasets
 
+from model import get_model
 from utility import parse_args, get_subsample
 from train import train, transform
 from visualise import plot_metrics, plot_test_accuracy, plot_time
