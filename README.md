@@ -27,12 +27,12 @@ source .venv/bin/activate
 ```
 
 # Install dependencies
-## For AMD GPUs
+### For AMD GPUs
 ```bash
     uv pip install -r requirements-amd.txt
     # uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
 ```
-## Other
+### Other
 ```bash
 uv pip install -r requirements.txt
 ```
@@ -40,7 +40,7 @@ uv pip install -r requirements.txt
 # Usage
 Note: The following commands are examples and may need to be adjusted based on your specific setup and requirements.
 
-## Train and evaluate model
+### Train and evaluate model
 
 Usage:
 ```bash
@@ -57,7 +57,7 @@ python train.py \
   --patience 5
 ```
 
-## Experiment on finding the best hyperparameters
+### Experiment on finding the best hyperparameters
 ```bash
 python experiment.py \
   --architecture EmnistCNN_32_128_256 \
@@ -71,7 +71,7 @@ python experiment.py \
   --weight-decay 0.0001 \
   --patience 5
 ```
-## Predict image with trained model
+### Predict image with trained model
 ```bash
 python predict.py \
   path/to/best_model.pth \
@@ -92,7 +92,7 @@ chmod +x run_train.sh follow_logs.sh
 ./follow_logs.sh $(sbatch --parsable run_train.sh)
 ```
 
-## Optional: Mirror the test_data directory to see results
+### *Optional: Mirror the test_data directory to see results
 1. Generate an SSH key locally (if you haven’t already)
 2. [Upload](https://mif.vu.lt/ldap/sshkey.php) your public key to MIF’s LDAP
 3. Using rsync
