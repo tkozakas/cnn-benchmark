@@ -33,11 +33,8 @@ def parse_args(args):
     DEVICE       = args['--device']
     EMNIST_TYPE  = args['--emnist-type']
 
-    raw_ss = args['--subsample-size']
-    if raw_ss is None or raw_ss.lower() == 'none' or raw_ss == '':
-        SUBSAMPLE_SIZE = None
-    else:
-        SUBSAMPLE_SIZE = int(raw_ss)
+    s = args['--subsample-size']
+    SUBSAMPLE_SIZE = None if s is None or s.lower() == 'none' else int(s)
 
     print(f"Device:       {DEVICE}")
     print(f"Architecture: {ARCHITECTURE}")

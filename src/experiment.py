@@ -1,22 +1,22 @@
-"""
+__doc__ = r"""
 Usage:
-     experiment.py [--architecture=ARCH]
-                   [--emnist-type=TYPE]
-                   [--device=DEVICE]
-                   [--cpu-workers=NUM]
-                   [--subsample-size=S]
-                   [--k-folds=K]
-                   [--epochs=N]
-                   [--batch-size=B]
-                   [--lr=LR]
-                   [--weight-decay=WD]
-                   [--patience=P]
+    experiment.py [--architecture=ARCH]
+                  [--emnist-type=TYPE]
+                  [--device=DEVICE]
+                  [--cpu-workers=NUM]
+                  [--subsample-size=S]
+                  [--k-folds=K]
+                  [--epochs=N]
+                  [--batch-size=B]
+                  [--lr=LR]
+                  [--weight-decay=WD]
+                  [--patience=P]
 
 Options:
     -h --help               Show this help message.
     --emnist-type=TYPE      EMNIST type (letters, digits, balanced) [default: balanced].
     --device=DEVICE         Device to use for training (cpu or cuda) [default: cuda].
-    --cpu-workers=NUM        Number of CPU workers for data loading [default: 6].
+    --cpu-workers=NUM       Number of CPU workers for data loading [default: 6].
     --architecture=ARCH     Model architecture [default: EmnistCNN_32_128_256].
     --subsample-size=S      Subsample size for training set [default: 1000].
     --k-folds=K             Number of CV folds              [default: 3].
@@ -26,6 +26,7 @@ Options:
     --weight-decay=WD       Weight decay (L2)               [default: 0.0001].
     --patience=P            Early-stop patience             [default: 5].
 """
+
 import os
 import warnings
 

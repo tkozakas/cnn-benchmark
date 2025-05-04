@@ -1,4 +1,4 @@
-"""
+__doc__ = r"""
 Usage:
     train.py [--architecture=ARCH]
              [--emnist-type=TYPE]
