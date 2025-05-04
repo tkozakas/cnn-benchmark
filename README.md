@@ -15,8 +15,8 @@ EMNIST
 4. Batch Size & Learning‐Rate Grid (Find sweet spot for batch size and learning rate)
 5. Architecture comparison (Emnist with 2 layers or 3 or RNN or RCNN (existing))
 
-
-## [uv](https://github.com/astral-sh/uv) python wrapper environment
+# Install dependencies
+### Install [uv](https://github.com/astral-sh/uv) python wrapper environment
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source $HOME/.local/bin/env
@@ -25,8 +25,6 @@ uv python install 3.12
 uv venv --python 3.12
 source .venv/bin/activate
 ```
-
-# Install dependencies
 ### For AMD GPUs
 ```bash
     uv pip install -r requirements-amd.txt
