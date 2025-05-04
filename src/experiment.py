@@ -16,9 +16,9 @@ Options:
     -h --help               Show this help message.
     --emnist-type=TYPE      EMNIST type (letters, digits, balanced) [default: balanced].
     --device=DEVICE         Device to use for training (cpu or cuda) [default: cpu].
-    --cpu-worker=NUM        Number of CPU workers for data loading [default: 4].
+    --cpu-workers=NUM        Number of CPU workers for data loading [default: 4].
     --architecture=ARCH     Model architecture [default: EmnistCNN_32_128_256].
-    --subsample-size=S      Subsample size for training set [default: 10000].
+    --subsample-size=S      Subsample size for training set [default: 100].
     --k-folds=K             Number of CV folds              [default: 3].
     --epochs=N              Max epochs per fold             [default: 20].
     --batch-size=B          Training batch size             [default: 128].
