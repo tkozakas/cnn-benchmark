@@ -117,14 +117,15 @@ chmod +x run_train.sh run_experiment.sh follow_logs.sh
 # Run the experiment script
 ./follow_logs.sh $(sbatch --parsable run_experiment.sh)
 ```
-
-### *Optional: Copy the test_data directory from the supercomputer to your local machine
+## Copy Results Back to Your Local Machine
+You can omit these if you don’t need the outputs locally.
+1. Copy the test_data directory from the supercomputer to your local machine
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
   mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/cnn-benchmark/test_data \
   ~/Documents/cnn-benchmark/test_data/
 ```
-### *Optional: Copy trained model from the supercomputer to your local machine
+2. Copy trained model from the supercomputer to your local machine
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
   mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/cnn-benchmark/trained \
