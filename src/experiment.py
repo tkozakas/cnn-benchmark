@@ -30,16 +30,16 @@ Options:
 import os
 import warnings
 
-import numpy as np
 import pandas as pd
 import torch
 from docopt import docopt
 from torchvision import datasets
 
 from model import get_model
-from utility import parse_args, get_subsample
 from train import train, transform
-from visualise import plot_metrics, plot_test_accuracy, plot_time
+from utility import parse_args, get_subsample
+from visualise import plot_test_accuracy, plot_architecture_comparison, plot_optimizer_comparison, plot_scheduler_comparison, \
+    plot_regularization_comparison, plot_batch_size_comparison
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
@@ -47,54 +47,104 @@ warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
 
 def run_experiment(name, architecture, dataset, **kwargs):
     """Run one experimental configuration and collect metrics."""
-    folds_data, avg_results = train(
+    folds_data = train(
         architecture=architecture,
         dataset=dataset,
         model_fn=lambda arch=architecture: get_model(arch),
         **kwargs
     )
 
-    # per-epoch averages for plotting
-    per_fold = {
-        'train_loss':   [f['train_loss'] for f in folds_data],
-        'val_loss':     [f['val_loss']   for f in folds_data],
-        'train_acc':    [f['train_accuracy'] for f in folds_data],
-        'val_acc':      [f['val_accuracy']   for f in folds_data],
+    # Compute averaged curves
+    per_fold_curves = {
+        'train_loss': [f['train_loss'] for f in folds_data],
+        'val_loss': [f['val_loss'] for f in folds_data],
+        'train_accuracy': [f['train_accuracy'] for f in folds_data],
+        'val_accuracy': [f['val_accuracy'] for f in folds_data],
+        'f1_score': [f['f1_score'] for f in folds_data],
+        'precision': [f['precision'] for f in folds_data],
+        'recall': [f['recall'] for f in folds_data],
+        'lr': [f['lr'] for f in folds_data],
+        'epoch_time': [f['epoch_time'] for f in folds_data],
+        'cpu_usage': [f['cpu_usage'] for f in folds_data],
+        'gpu_usage': [f['gpu_usage'] for f in folds_data],
+        'samples_per_sec': [f['samples_per_sec'] for f in folds_data],
     }
     avg_curve = {
         k: [sum(vals) / len(vals) for vals in zip(*v)]
-        for k, v in per_fold.items()
+        for k, v in per_fold_curves.items()
     }
 
+    # Aggregate test metrics
+    test_accs = [f['test_accuracy'] for f in folds_data]
+    test_losses = [f['test_loss'] for f in folds_data]
+    test_precisions = [f['test_precision'] for f in folds_data]
+    test_recalls = [f['test_recall'] for f in folds_data]
+    test_f1s = [f['test_f1_score'] for f in folds_data]
+
+    avg_test_accuracy = sum(test_accs) / len(test_accs)
+    avg_test_loss = sum(test_losses) / len(test_losses)
+    avg_test_precision = sum(test_precisions) / len(test_precisions)
+    avg_test_recall = sum(test_recalls) / len(test_recalls)
+    avg_test_f1_score = sum(test_f1s) / len(test_f1s)
+
+    # Aggregate performance metrics
+    training_time = sum(avg_curve['epoch_time'])
+    avg_cpu_usage = sum(avg_curve['cpu_usage']) / len(avg_curve['cpu_usage'])
+    avg_gpu_usage = sum(avg_curve['gpu_usage']) / len(avg_curve['gpu_usage'])
+    avg_samples_per_sec = sum(avg_curve['samples_per_sec']) / len(avg_curve['samples_per_sec'])
+
+    # Aggregate architecture metrics
+    param_counts = [f['param_count'] for f in folds_data]
+    inference_latencies = [f['inference_latency'] for f in folds_data]
+    avg_param_count = sum(param_counts) / len(param_counts)
+    avg_inference_latency = sum(inference_latencies) / len(inference_latencies)
+
     return {
-        'name':                name,
-        'batch_size':          kwargs['batch_size'],
-        'learning_rate':       kwargs['learning_rate'],
-        'avg_train_loss':      float(np.mean(avg_curve['train_loss'])),
-        'avg_val_loss':        float(np.mean(avg_curve['val_loss'])),
-        'avg_train_accuracy':  float(np.mean(avg_curve['train_acc'])),
-        'avg_val_accuracy':    float(np.mean(avg_curve['val_acc'])),
-        'test_accuracy':       avg_results['avg_test_acc'],
-        'time':                avg_results.get('avg_time', avg_results.get('elapsed_time')),
-        # curves for plotting
-        'train_loss_curve':    avg_curve['train_loss'],
-        'val_loss_curve':      avg_curve['val_loss'],
-        'train_acc_curve':     avg_curve['train_acc'],
-        'val_acc_curve':       avg_curve['val_acc'],
-        'cpu_usage':           avg_results.get('avg_cpu_usage', []),
-        'gpu_usage':           avg_results.get('avg_gpu_usage', []),
+        'name': name,
+        'batch_size': kwargs.get('batch_size'),
+        'param_count': avg_param_count,
+        'inference_latency': avg_inference_latency,
+        # averaged epoch-wise curves
+        'train_loss_curve': avg_curve['train_loss'],
+        'val_loss_curve': avg_curve['val_loss'],
+        'train_accuracy_curve': avg_curve['train_accuracy'],
+        'val_accuracy_curve': avg_curve['val_accuracy'],
+        'f1_score_curve': avg_curve['f1_score'],
+        'precision_curve': avg_curve['precision'],
+        'recall_curve': avg_curve['recall'],
+        'lr_curve': avg_curve['lr'],
+        'epoch_time_curve': avg_curve['epoch_time'],
+        'cpu_usage_curve': avg_curve['cpu_usage'],
+        'gpu_usage_curve': avg_curve['gpu_usage'],
+        'samples_per_sec_curve': avg_curve['samples_per_sec'],
+        # aggregated performance metrics
+        'training_time': training_time,
+        'avg_cpu_usage': avg_cpu_usage,
+        'avg_gpu_usage': avg_gpu_usage,
+        'avg_samples_per_sec': avg_samples_per_sec,
+        # aggregated test metrics
+        'test_accuracy': avg_test_accuracy,
+        'test_loss': avg_test_loss,
+        'test_precision': avg_test_precision,
+        'test_recall': avg_test_recall,
+        'test_f1_score': avg_test_f1_score,
     }
 
 
 def save_test_data(data, filename):
-    """Save the summary table to CSV."""
-    pd.DataFrame(data).to_csv(
-        filename, index=False,
+    """Save the key summary metrics to CSV."""
+    df = pd.DataFrame(data)
+    df.to_csv(
+        filename,
+        index=False,
         columns=[
-            'name', 'batch_size', 'learning_rate',
-            'avg_train_loss', 'avg_val_loss',
-            'avg_train_accuracy', 'avg_val_accuracy',
-            'test_accuracy', 'time'
+            'name',
+            'batch_size',
+            'test_accuracy',
+            'test_loss',
+            'test_precision',
+            'test_recall',
+            'test_f1_score'
         ]
     )
 
@@ -131,7 +181,7 @@ def main():
         for name, opt_fn in optim_map.items()
     ]
     save_test_data(runs, '../test_data/optimizer_comparison.csv')
-    plot_metrics(runs, 'Optimizer Comparison')
+    plot_optimizer_comparison(runs, 'Optimizer Comparison')
     plot_test_accuracy(runs, 'Optimizer: Test Accuracy Comparison')
     best_opt = max(runs, key=lambda r: r['test_accuracy'])['name']
     best_opt_fn = optim_map[best_opt]
@@ -158,9 +208,9 @@ def main():
         for name, params in sched_map.items()
     ]
     save_test_data(runs, '../test_data/scheduler_comparison.csv')
-    plot_metrics(runs, 'Scheduler Comparison')
+    plot_scheduler_comparison(runs, 'Scheduler Comparison')
     plot_test_accuracy(runs, 'Scheduler: Test Accuracy Comparison')
-    best_sched = max(runs, key=lambda r: r['test_accuracy'])['name']
+    best_sched = max(runs, key=lambda r: r['test_f1_score'])['name']
     best_sched_fn = sched_map[best_sched].get('scheduler_fn')
     print(f"Best scheduler: {best_sched}")
 
@@ -180,9 +230,9 @@ def main():
         for name, wd in reg_map.items()
     ]
     save_test_data(runs, '../test_data/regularization_comparison.csv')
-    plot_metrics(runs, 'Regularization Comparison')
+    plot_regularization_comparison(runs, 'Regularization Comparison')
     plot_test_accuracy(runs, 'Regularization: Test Accuracy Comparison')
-    best_reg = max(runs, key=lambda r: r['test_accuracy'])['name']
+    best_reg = max(runs, key=lambda r: r['test_f1_score'])['name']
     best_wd  = reg_map[best_reg]
     print(f"Best weight decay: {best_reg}")
 
@@ -202,34 +252,13 @@ def main():
         for b in batch_sizes
     ]
     save_test_data(runs_bs, '../test_data/batch_size_comparison.csv')
-    plot_metrics(runs_bs, 'Batch Size Comparison')
-    plot_time(runs_bs, 'Batch Size: Training Time')
+    plot_batch_size_comparison(runs_bs, 'Batch Size Comparison')
     plot_test_accuracy(runs_bs, 'Batch Size: Test Accuracy Comparison')
-    best_bs = max(runs_bs, key=lambda r: r['test_accuracy'])['batch_size']
+    best_bs = max(runs_bs, key=lambda r: r['test_f1_score'])['batch_size']
     print(f"Best batch size: {best_bs}")
 
-    # 5) Learning-Rate Grid at Best Batch Size
-    lr_grid = [1e-3, 1e-4, 1e-5]
-    runs_lr = [
-        run_experiment(
-            f"BS={best_bs}, LR={l}", ARCHITECTURE, ds,
-            k_folds=K, epochs=N, batch_size=best_bs,
-            learning_rate=l, optimizer_fn=best_opt_fn,
-            scheduler_fn=best_sched_fn,
-            weight_decay=best_wd,
-            early_stopping_patience=PAT,
-            cpu_workers=CPU_WORKERS,
-            device=DEVICE
-        )
-        for l in lr_grid
-    ]
-    save_test_data(runs_lr, '../test_data/lr_grid_comparison.csv')
-    plot_metrics(runs_lr, f'LR Grid @ BS={best_bs}')
-    plot_test_accuracy(runs_lr, f'LR Grid @ BS={best_bs}: Test Accuracy Comparison')
-    best_lr = max(runs_lr, key=lambda r: r['test_accuracy'])['learning_rate']
-    print(f"Best learning rate: {best_lr}")
-
-    # 6) Architecture Comparison
+    # 5) Architecture Comparison
+    best_lr = 1e-3
     archs = [
         'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256',
         'EmnistCNN_8_32_64',  'EmnistCNN_16_64',
@@ -249,8 +278,7 @@ def main():
         for arch in archs
     ]
     save_test_data(runs, '../test_data/architecture_comparison.csv')
-    plot_metrics(runs, 'Architecture Comparison')
-    plot_time(runs, 'Architecture: Training Time')
+    plot_architecture_comparison(runs, 'Architecture Comparison')
     plot_test_accuracy(runs, 'Architecture: Test Accuracy Comparison')
 
 

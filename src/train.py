@@ -31,7 +31,6 @@ import subprocess
 import time
 import warnings
 
-import numpy as np
 import psutil
 import torch
 from docopt import docopt
@@ -41,7 +40,7 @@ from sklearn.model_selection import KFold
 from torch import nn, optim
 from torch.backends import cudnn
 from torch.utils.data import DataLoader, Subset
-from torchvision import datasets, transforms
+from torchvision import datasets
 
 from config import train_config, model_config
 from model import get_model, save_model, load_model
@@ -182,7 +181,6 @@ def train(architecture, dataset, model_fn,
           device='cuda',
           cpu_workers=4,
           random_state=42):
-    """Run k-fold CV, returning per-fold histories and aggregated averages."""
     device = torch.device(device)
     criterion = criterion or nn.CrossEntropyLoss()
     kfold = KFold(
@@ -194,38 +192,67 @@ def train(architecture, dataset, model_fn,
     total_start = time.time()
 
     for fold, (train_idx, test_idx) in enumerate(kfold.split(dataset), start=1):
-        fold_start = time.time()
+        # Number of samples in this fold’s training split
+        num_train_samples = len(train_idx)
+
+        # DataLoaders
         train_loader, val_loader, test_loader = get_data_loaders(
             dataset, train_idx, test_idx,
             batch_size, cpu_workers
         )
+
+        # Initialize model, optimizer, scheduler
         model, optimizer, scheduler = init_model_optimizer_scheduler(
             model_fn, learning_rate, weight_decay,
             optimizer_fn, scheduler_fn, device
         )
+
+        # Count trainable params
+        param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
         best_val_loss = float('inf')
         patience_cnt = 0
+
+        # History containers
         history = {
             'train_loss': [], 'train_accuracy': [],
             'val_loss':   [], 'val_accuracy':   [],
-            'cpu_usage':  [], 'gpu_usage':      []
+            'f1_score': [], 'precision': [], 'recall': [],
+            'lr': [], 'epoch_time': [],
+            'cpu_usage': [], 'gpu_usage': [],
+            'samples_per_sec': []
         }
 
+        # --- Per-epoch training loop ---
         for epoch in range(1, epochs+1):
             t0 = time.time()
             tloss, tacc, cpu_peak, gpu_peak = train_one_epoch(
                 model, train_loader, criterion, optimizer, device
             )
+            epoch_duration = time.time() - t0
+
             vloss, vacc, tp, fp, prec, rec, f1 = evaluate_and_metrics(
                 model, val_loader, criterion, device
             )
+
+            # Throughput = samples / second
+            throughput = num_train_samples / epoch_duration
+
+            # Record epoch metrics
             history['train_loss'].append(tloss)
             history['train_accuracy'].append(tacc)
             history['val_loss'].append(vloss)
             history['val_accuracy'].append(vacc)
+            history['f1_score'].append(f1)
+            history['precision'].append(prec)
+            history['recall'].append(rec)
+            history['lr'].append(optimizer.param_groups[0]['lr'])
+            history['epoch_time'].append(epoch_duration)
+            history['samples_per_sec'].append(throughput)
             history['cpu_usage'].append(cpu_peak)
             history['gpu_usage'].append(gpu_peak)
 
+            # Step scheduler and early stop
             if scheduler:
                 scheduler.step()
             if early_stopping_patience is not None:
@@ -234,58 +261,61 @@ def train(architecture, dataset, model_fn,
                 else:
                     patience_cnt += 1
                     if patience_cnt >= early_stopping_patience:
-                        print(
-                            f"Early stopping at epoch {epoch}"
-                            f" (patience: {patience_cnt})"
-                        )
+                        print(f"Early stopping at epoch {epoch} (patience: {patience_cnt})")
                         break
 
             print(
                 f"Fold {fold} | Epoch {epoch}/{epochs} | "
                 f"Train Loss: {tloss:.3f} | Train Acc: {tacc:.3f} | "
-                f"Validation Loss: {vloss:.3f} | Validation Acc: {vacc:.3f} | "
-                f"Prec: {prec:.3f} | Rec: {rec:.3f} | F1: {f1:.3f} | "
-                f"CPU: {cpu_peak:.1f}% | GPU: {gpu_peak:.1f}% | "
-                f"Time: {time.time() - t0:.2f}s"
+                f"Val Loss: {vloss:.3f} | Val Acc: {vacc:.3f} | "
+                f"F1: {f1:.3f} | CPU: {cpu_peak:.1f}% | GPU: {gpu_peak:.1f}% | "
+                f"Time: {epoch_duration:.2f}s"
             )
 
+        # --- End of epochs: evaluate on test set ---
         tloss, tacc, tp, fp, prec, rec, f1 = evaluate_and_metrics(
             model, test_loader, criterion, device
         )
-        save_model(model, f"{architecture}_fold{fold}.pth")
+        print(f"Test | Loss: {tloss:.3f} | Acc: {tacc:.3f} | Prec: {prec:.3f} | Rec: {rec:.3f} | F1: {f1:.3f}")
 
-        all_results.append({
-            'fold': fold,
-            **history,
+        # Measure inference latency per sample
+        model.eval()
+        # Warm-up (esp. for GPU)
+        dummy_input = next(iter(test_loader))[0].to(device)
+        with torch.no_grad():
+            for _ in range(5):
+                _ = model(dummy_input)
+        # Timed full pass
+        start_inf = time.time()
+        total_samples = 0
+        with torch.no_grad():
+            for xb, _ in test_loader:
+                bs = xb.size(0)
+                total_samples += bs
+                _ = model(xb.to(device))
+        inf_elapsed = time.time() - start_inf
+        inference_latency = inf_elapsed / total_samples
+
+        # Collect final test + fold metadata
+        history.update({
             'test_loss': tloss,
             'test_accuracy': tacc,
-            'TP': tp, 'FP': fp,
-            'precision': prec, 'sensitivity': rec,
-            'f1_score': f1,
-            'elapsed_time': time.time() - fold_start,
-            'epochs': len(history['train_loss'])
+            'test_precision': prec,
+            'test_recall': rec,
+            'test_f1_score': f1,
+        })
+
+        save_model(model, f"{architecture}_fold{fold}.pth")
+        all_results.append({
+            'fold': fold,
+            'param_count': param_count,
+            'inference_latency': inference_latency,
+            **history
         })
 
     total_time = time.time() - total_start
-    avg = lambda k: np.mean([np.mean(r[k]) for r in all_results])
-    avg_results = {
-        'avg_train_loss':  avg('train_loss'),
-        'avg_train_acc':   avg('train_accuracy'),
-        'avg_val_loss':    avg('val_loss'),
-        'avg_val_acc':     avg('val_accuracy'),
-        'avg_test_loss':   avg('test_loss'),
-        'avg_test_acc':    avg('test_accuracy'),
-        'avg_precision':   avg('precision'),
-        'avg_sensitivity': avg('sensitivity'),
-        'avg_f1_score':    avg('f1_score'),
-        'avg_epochs': avg('epochs'),
-        'avg_cpu_usage': np.mean([np.mean(r['cpu_usage']) for r in all_results]),
-        'avg_gpu_usage': np.mean([np.mean(r['gpu_usage']) for r in all_results]),
-        'total_time': total_time
-    }
-
-    return all_results, avg_results
-
+    print(f"Total training time across all folds: {total_time:.2f}s")
+    return all_results
 
 def main():
     print("Starting training...")
