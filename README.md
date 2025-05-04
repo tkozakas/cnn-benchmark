@@ -29,9 +29,13 @@ source .venv/bin/activate
 ```bash
     uv pip install -r requirements.txt
 ```
-### Optional for AMD
+### For AMD
 ```bash
 uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+```
+### For NVIDIA
+```bash
+uv pip install torch torchvision torchaudio
 ```
 
 # Usage
