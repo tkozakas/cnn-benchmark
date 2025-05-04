@@ -86,10 +86,12 @@ python predict.py \
 ssh mifvu_username@uosis.mif.vu.lt
 ssh hpc
 git clone https://github.com/tkozakas/ocr-models && cd ocr-models
-chmod +x run_train.sh follow_logs.sh
+chmod +x run_train.sh run_experiment.sh follow_logs.sh
 
 # Run the training script
 ./follow_logs.sh $(sbatch --parsable run_train.sh)
+# Run the experiment script
+./follow_logs.sh $(sbatch --parsable run_experiment.sh)
 ```
 
 ### *Optional: Copy the test_data directory from the supercomputer to your local machine
