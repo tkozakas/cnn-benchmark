@@ -1,8 +1,8 @@
-# OCR Model Benchmark
+# CNN Architecture Benchmark
 
 ## Project Goals
 
-This project aims to benchmark various OCR models to evaluate their performance in terms of
+This project aims to benchmark various CNN architectures to evaluate their performance in terms of
 accuracy, using various metrics, and training time. The goal is to identify the best-performing model for text
 recognition trained on EMNIST datasets. The project will also explore the impact of different hyperparameters, such as
 learning rate, batch size, and architecture, on the model's performance.
@@ -109,7 +109,7 @@ ssh -i ~/.ssh/id_ed25519 mifvu_username@hpc.mif.vu.lt
 ```
 4. Clone the repository and run the scripts
 ```bash
-git clone https://github.com/tkozakas/ocr-models && cd ocr-models
+git clone https://github.com/tkozakas/cnn-benchmark && cd cnn-benchmark
 chmod +x run_train.sh run_experiment.sh follow_logs.sh
 
 # Run the training script
@@ -121,12 +121,12 @@ chmod +x run_train.sh run_experiment.sh follow_logs.sh
 ### *Optional: Copy the test_data directory from the supercomputer to your local machine
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
-  mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/ocr-models/test_data \
-  ~/Documents/ocr-models/test_data/
+  mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/cnn-benchmark/test_data \
+  ~/Documents/cnn-benchmark/test_data/
 ```
 ### *Optional: Copy trained model from the supercomputer to your local machine
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
-  mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/ocr-models/trained \
-  ~/Documents/ocr-models/trained/
+  mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/cnn-benchmark/trained \
+  ~/Documents/cnn-benchmark/trained/
 ```
