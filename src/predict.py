@@ -4,19 +4,14 @@ showing each segmented character alongside its predicted label, and drawing boun
 the original image to indicate where each character was found.
 
 Usage:
-  predict.py <model_path> <image_path>
-             [--device=<device>]
-             [--architecture=<arch>]
-             [--emnist-type=<type>]
+  predict.py <model_path> <image_path> [--device=<device>] [--architecture=<arch>] [--emnist-type=<type>]
 
 Options:
   <model_path>              Path to the trained PyTorch model file.
   <image_path>              Path to the input image.
   --device=<device>         Device to use for prediction [default: cpu].
-  --architecture=<arch>     Model architecture name
-                            [default: EmnistCNN_32_128_256].
-  --emnist-type=<type>      EMNIST split to use (letters/digits/balanced)
-                            [default: balanced].
+  --architecture=<arch>     Model architecture name [default: EmnistCNN_32_128_256].
+  --emnist-type=<type>      EMNIST split to use (letters/digits/balanced) [default: balanced].
 """
 import random
 
