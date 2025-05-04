@@ -104,11 +104,11 @@ chmod +x run_train.sh run_experiment.sh follow_logs.sh
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
   mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/ocr-models/test_data \
-  ~/Documents/ocr-models/test_data/ # path to your local directory
+  ~/Documents/ocr-models/test_data/
 ```
 ### *Optional: Copy trained model from the supercomputer to your local machine
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
   mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/ocr-models/trained \
-  ~/Documents/ocr-models/trained/ # path to your local directory
+  ~/Documents/ocr-models/trained/
 ```
