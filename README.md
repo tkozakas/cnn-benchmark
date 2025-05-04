@@ -25,14 +25,12 @@ uv python install 3.12
 uv venv --python 3.12
 source .venv/bin/activate
 ```
-### For AMD GPUs
 ```bash
-    uv pip install -r requirements-amd.txt
-    # uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+    uv pip install -r requirements.txt
 ```
-### Other
+### Optional for AMD
 ```bash
-uv pip install -r requirements.txt
+uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
 ```
 
 # Usage
