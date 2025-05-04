@@ -3,10 +3,9 @@
 ## Project Goals
 
 This project aims to benchmark various OCR models to evaluate their performance in terms of
-accuracy, edit distance, and runtime.
-
-## Datasets
-EMNIST
+accuracy, using various metrics, and training time. The goal is to identify the best-performing model for text
+recognition trained on EMNIST datasets. The project will also explore the impact of different hyperparameters, such as
+learning rate, batch size, and architecture, on the model's performance.
 
 ## The experiments
 1. Optimizer accuracy comparison (Adam is better -> use Adam)
@@ -15,7 +14,25 @@ EMNIST
 4. Batch Size & Learning‐Rate Grid (Find sweet spot for batch size and learning rate)
 5. Architecture comparison (Emnist with 2 layers or 3 or RNN or RCNN (existing))
 
-# Install dependencies
+---
+
+## Environment
+
+- **GPU driver / backend**: AMD ROCm 6.2 (but the same code should work on NVIDIA/CUDA)
+- **Device**: AMD Radeon RX 6600 XT
+- **OS**: Fedora
+- **Python**: 3.12
+
+## 6600 XT Workaround
+
+If you encounter the error it’s because ROCm 6.2 doesn’t recognize the 6600 XT’s `gfx1032` architecture by default. You
+can work around this by forcing the HSA version override:
+
+```bash
+export HSA_OVERRIDE_GFX_VERSION=10.3.0
+```  
+
+# Installation
 ### Install [uv](https://github.com/astral-sh/uv) python wrapper environment
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
