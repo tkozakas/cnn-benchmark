@@ -55,6 +55,7 @@ from visualise import (
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 warnings.filterwarnings("ignore", message=".*hipBLASLt.*", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
 cudnn.benchmark = True
 
 transform = get_transforms()

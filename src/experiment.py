@@ -43,7 +43,7 @@ from visualise import plot_metrics, plot_test_accuracy, plot_time
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
-
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
 
 def run_experiment(name, architecture, dataset, **kwargs):
     """Run one experimental configuration and collect metrics."""
