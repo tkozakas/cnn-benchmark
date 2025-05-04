@@ -100,6 +100,7 @@ def save_test_data(data, filename):
 
 
 def main():
+    print("Running experiments...")
     args = docopt(__doc__)
     ARCHITECTURE, B, CPU_WORKERS, DEVICE, EMNIST_TYPE, K, LR, N, PAT, SUBSAMPLE_SIZE, WD = parse_args(args)
 

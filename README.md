@@ -14,8 +14,6 @@ learning rate, batch size, and architecture, on the model's performance.
 4. Batch Size & Learning‐Rate Grid (Find sweet spot for batch size and learning rate)
 5. Architecture comparison (Emnist with 2 layers or 3 or RNN or RCNN (existing))
 
----
-
 ## Environment
 
 - **GPU driver / backend**: AMD ROCm 6.2 (but the same code should work on NVIDIA/CUDA)

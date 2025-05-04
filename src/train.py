@@ -288,6 +288,7 @@ def train(architecture, dataset, model_fn,
 
 
 def main():
+    print("Starting training...")
     args = docopt(__doc__)
     ARCHITECTURE, B, CPU_WORKERS, DEVICE, EMNIST_TYPE, K, LR, N, PAT, SUBSAMPLE_SIZE, WD = parse_args(args)
 
