@@ -42,7 +42,7 @@ source .venv/bin/activate
 ```
 ### Install required packages
 ```bash
-    uv pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 ### For AMD
 ```bash
