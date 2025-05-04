@@ -91,3 +91,14 @@ chmod +x run_train.sh follow_logs.sh
 # Run the training script
 ./follow_logs.sh $(sbatch --parsable run_train.sh)
 ```
+
+## Optional: Mirror the test_data directory to see results
+1. Generate an SSH key locally (if you haven’t already)
+2. [Upload](https://mif.vu.lt/ldap/sshkey.php) your public key to MIF’s LDAP
+3. Using rsync
+```bash
+rsync -avz \
+  -e "ssh -i ~/.ssh/id_ed25519" \
+  mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/ocr-models/test_data/ \
+  ~/Documents/ocr-models/test_data/
+```
