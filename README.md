@@ -80,9 +80,17 @@ python predict.py \
 ```
 
 # Train on VU supercomputer
+1. Generate an SSH key locally (if you haven’t already)
 ```bash
-ssh mifvu_username@uosis.mif.vu.lt
-ssh hpc
+ssh-keygen
+```
+2. [Upload](https://mif.vu.lt/ldap/sshkey.php) your public key to MIF’s LDAP
+3. Connect to the supercomputer
+```bash
+ssh -i ~/.ssh/id_ed25519 mifvu_username@hpc.mif.vu.lt
+```
+4. Clone the repository and run the scripts
+```bash
 git clone https://github.com/tkozakas/ocr-models && cd ocr-models
 chmod +x run_train.sh run_experiment.sh follow_logs.sh
 
@@ -93,15 +101,12 @@ chmod +x run_train.sh run_experiment.sh follow_logs.sh
 ```
 
 ### *Optional: Copy the test_data directory from the supercomputer to your local machine
-1. Generate an SSH key locally (if you haven’t already)
-2. [Upload](https://mif.vu.lt/ldap/sshkey.php) your public key to MIF’s LDAP
-3. Run the following command to copy the test_data directory
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
   mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/ocr-models/test_data \
   ~/Documents/ocr-models/test_data/ # path to your local directory
 ```
-4. Copy trained model from the supercomputer to your local machine
+### *Optional: Copy trained model from the supercomputer to your local machine
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
   mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/ocr-models/trained \
