@@ -41,8 +41,6 @@ uv pip install -r requirements.txt
 Note: The following commands are examples and may need to be adjusted based on your specific setup and requirements.
 
 ### Train and evaluate model
-
-Usage:
 ```bash
 python train.py \
   --architecture EmnistCNN_32_128_256 \
