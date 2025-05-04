@@ -27,7 +27,7 @@ python experiment.py \
   --subsample-size 10000 \
   --k-folds 3 \
   --epochs 20 \
-  --batch-size 128 \
-  --lr 0.0005 \
+  --batch-size 256 \
+  --lr 0.0001 \
   --weight-decay 0.0001 \
-  --patience 5
+  --patience 20
