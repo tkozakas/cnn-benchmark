@@ -38,9 +38,8 @@ def plot_metrics(runs, title):
 
 
 def plot_time(runs, title):
-    filtered = [r for r in runs if r.get('time') is not None]
-    names = [r['name'] for r in filtered]
-    times = [r['time'] for r in filtered]
+    names = [r['name'] for r in runs]
+    times = [r['time'] for r in runs]
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.bar(names, times)
     plt.xticks(rotation=45, ha='right')
@@ -55,9 +54,8 @@ def plot_time(runs, title):
 
 
 def plot_test_accuracy(runs, title):
-    filtered = [r for r in runs if r.get('time') is not None]
-    names = [r['name'] for r in filtered]
-    accs  = [r['test_accuracy'] for r in filtered]
+    names = [r['name'] for r in runs]
+    accs  = [r['test_accuracy'] for r in runs]
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.bar(names, accs)
     plt.xticks(rotation=45, ha='right')
