@@ -30,5 +30,4 @@ python experiment.py \
   --epochs 20 \
   --batch-size 256 \
   --lr 0.0001 \
-  --weight-decay 0.0001 \
-  --patience 20
+  --weight-decay 0.0001
