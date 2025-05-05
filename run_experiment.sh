@@ -24,10 +24,10 @@ cd src
 python experiment.py \
   --architecture EmnistCNN_32_128_256 \
   --device cuda \
-  --cpu-workers 6 \
-  --subsample-size 10000 \
-  --k-folds 3 \
-  --epochs 20 \
+  --cpu-workers 8 \
+  --subsample-size 50000 \
+  --k-folds 5 \
+  --epochs 50 \
   --batch-size 256 \
   --lr 0.0001 \
   --weight-decay 0.0001
