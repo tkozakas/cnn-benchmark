@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix
 os.makedirs("../test_data/plot", exist_ok=True)
 
 
-def plot_optimizer_comparison(runs, title, loss_threshold=0.2):
+def plot_optimizer_comparison(runs, title, loss_threshold=0.3):
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     ax_train_loss, ax_val_loss, ax_val_acc, ax_speed = axes.flatten()
 
@@ -19,28 +19,24 @@ def plot_optimizer_comparison(runs, title, loss_threshold=0.2):
         ax_val_loss.plot(epochs, run['val_loss_curve'], label=f"{run['name']} Val Loss")
         ax_val_acc.plot(epochs, run['val_accuracy_curve'], label=f"{run['name']} Val Acc")
 
-    # Configure loss vs epoch
     ax_train_loss.set_title('Training Loss vs Epoch')
     ax_train_loss.set_xlabel('Epoch')
     ax_train_loss.set_ylabel('Loss')
     ax_train_loss.grid(True)
     ax_train_loss.legend(fontsize='small')
 
-    # Configure validation loss vs epoch
     ax_val_loss.set_title('Validation Loss vs Epoch')
     ax_val_loss.set_xlabel('Epoch')
     ax_val_loss.set_ylabel('Loss')
     ax_val_loss.grid(True)
     ax_val_loss.legend(fontsize='small')
 
-    # Configure validation accuracy vs epoch
     ax_val_acc.set_title('Validation Accuracy vs Epoch')
     ax_val_acc.set_xlabel('Epoch')
     ax_val_acc.set_ylabel('Accuracy')
     ax_val_acc.grid(True)
     ax_val_acc.legend(fontsize='small')
 
-    # Compute epochs to threshold for each optimizer run
     names = []
     epochs_to_thresh = []
     for run in runs:
@@ -51,21 +47,17 @@ def plot_optimizer_comparison(runs, title, loss_threshold=0.2):
         names.append(run['name'])
         epochs_to_thresh.append(idx)
 
-    # Bar chart for speed to threshold
     ax_speed.bar(names, epochs_to_thresh)
     ax_speed.set_title(f'Epochs to reach Val Loss ≤ {loss_threshold}')
     ax_speed.set_xlabel('Optimizer')
     ax_speed.set_ylabel('Epochs')
     ax_speed.grid(axis='y', linestyle='--', alpha=0.7)
 
-    # Main title and layout
     fig.suptitle(f"{title} — Optimizer Comparison")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-    # Save and show
     outpath = f"../test_data/plot/{title.replace(' ', '_')}_optimizer_comparison.png"
     fig.savefig(outpath)
-    plt.show()
 
 
 def plot_scheduler_comparison(runs, title):
@@ -107,7 +99,6 @@ def plot_scheduler_comparison(runs, title):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     outpath = f"../test_data/plot/{title.replace(' ', '_')}_scheduler_comparison.png"
     fig.savefig(outpath)
-    plt.show()
 
 
 def plot_regularization_comparison(runs, title):
@@ -150,7 +141,6 @@ def plot_regularization_comparison(runs, title):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     outpath = f"../test_data/plot/{title.replace(' ', '_')}_regularization_comparison.png"
     fig.savefig(outpath)
-    plt.show()
 
 def plot_batch_size_comparison(runs, title):
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
@@ -190,8 +180,6 @@ def plot_batch_size_comparison(runs, title):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     outpath = f"../test_data/plot/{title.replace(' ', '_')}_batch_size_comparison.png"
     fig.savefig(outpath)
-    plt.show()
-
 
 def plot_learning_rate_comparison(runs, title):
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
@@ -232,7 +220,6 @@ def plot_learning_rate_comparison(runs, title):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     outpath = f"../test_data/plot/{title.replace(' ', '_')}_lr_comparison.png"
     fig.savefig(outpath)
-    plt.show()
 
 # Architecture comparison visualization
 def plot_architecture_comparison(runs, title, acc_threshold=None):
@@ -304,7 +291,6 @@ def plot_architecture_comparison(runs, title, acc_threshold=None):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     outpath = f"../test_data/plot/{title.replace(' ', '_')}_architecture_comparison.png"
     fig.savefig(outpath)
-    plt.show()
 
 def plot_test_accuracy(runs, title):
     names = [r['name'] for r in runs]
@@ -319,7 +305,6 @@ def plot_test_accuracy(runs, title):
 
     outpath = f"../test_data/plot/{title.replace(' ', '_')}_accuracy.png"
     fig.savefig(outpath)
-    plt.show()
 
 
 def plot_aggregated_learning_curves(all_results, metric_label, train_key, val_key):
@@ -351,7 +336,6 @@ def plot_aggregated_learning_curves(all_results, metric_label, train_key, val_ke
 
     outpath = f"../test_data/plot/aggregated_{metric_label.replace(' ', '_')}.png"
     fig.savefig(outpath)
-    plt.show()
 
 
 def plot_confusion_matrix(model, loader, device, classes):
@@ -380,4 +364,3 @@ def plot_confusion_matrix(model, loader, device, classes):
 
     outpath = "../test_data/plot/confusion_matrix.png"
     fig.savefig(outpath)
-    plt.show()
