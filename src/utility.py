@@ -28,13 +28,13 @@ def parse_args(args):
     B            = int(args['--batch-size'])
     LR           = float(args['--lr'])
     WD           = float(args['--weight-decay'])
-    PAT          = int(args['--patience'])
     CPU_WORKERS  = int(args['--cpu-workers'])
     DEVICE       = args['--device']
     EMNIST_TYPE  = args['--emnist-type']
 
-    s = args['--subsample-size']
-    SUBSAMPLE_SIZE = None if s is None or s.lower() == 'none' else int(s)
+    PAT = None if args['--patience'] is None or args['--patience'].lower() == 'none' else int(args['--patience'])
+    SUBSAMPLE_SIZE = None if args['--subsample-size'] is None or args['--subsample-size'].lower() == 'none' else int(
+        args['--subsample-size'])
 
     print(f"Device:       {DEVICE}")
     print(f"Architecture: {ARCHITECTURE}")
