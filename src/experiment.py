@@ -24,7 +24,7 @@ Options:
     --batch-size=B          Training batch size             [default: 128].
     --lr=LR                 Learning rate                   [default: 0.001].
     --weight-decay=WD       Weight decay (L2)               [default: 0.0001].
-    --patience=P            Early-stop patience             [default: 5].
+    --patience=P            Early-stop patience             [default: None].
 """
 
 import os
