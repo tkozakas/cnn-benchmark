@@ -18,7 +18,7 @@ Options:
     --device=DEVICE         Device to use for training (cpu or cuda) [default: cuda].
     --cpu-workers=NUM       Number of CPU workers for data loading [default: 6].
     --architecture=ARCH     Model architecture [default: EmnistCNN_32_128_256].
-    --subsample-size=S      Subsample size for training set [default: 1000].
+    --subsample-size=S      Subsample size for training set [default: None].
     --k-folds=K             Number of CV folds              [default: 3].
     --epochs=N              Max epochs per fold             [default: 10].
     --batch-size=B          Training batch size             [default: 128].
