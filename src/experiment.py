@@ -39,7 +39,7 @@ from model import get_model
 from train import train, transform
 from utility import parse_args, get_subsample
 from visualise import plot_test_accuracy, plot_architecture_comparison, plot_optimizer_comparison, plot_scheduler_comparison, \
-    plot_regularization_comparison, plot_batch_size_comparison
+    plot_regularization_comparison, plot_batch_size_comparison, plot_architecture_by_fold
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
@@ -100,6 +100,7 @@ def run_experiment(name, architecture, dataset, **kwargs):
     avg_inference_latency = sum(inference_latencies) / len(inference_latencies)
 
     return {
+        'folds_data': folds_data,
         'name': name,
         'batch_size': kwargs.get('batch_size'),
         'param_count': avg_param_count,
@@ -132,7 +133,7 @@ def run_experiment(name, architecture, dataset, **kwargs):
 
 
 def save_test_data(data, filename):
-    """Save the key summary metrics to CSV."""
+    """Save the metrics to CSV."""
     df = pd.DataFrame(data)
     df.to_csv(
         filename,
@@ -140,6 +141,12 @@ def save_test_data(data, filename):
         columns=[
             'name',
             'batch_size',
+            'param_count',
+            'inference_latency',
+            'training_time',
+            'avg_cpu_usage',
+            'avg_gpu_usage',
+            'avg_samples_per_sec',
             'test_accuracy',
             'test_loss',
             'test_precision',
@@ -163,9 +170,11 @@ def main():
     ds = get_subsample(full, SUBSAMPLE_SIZE)
 
     # 1) Optimizer Comparison
+    print("Running optimizer comparison...")
     optim_map = {
-        'Adam':    lambda p: torch.optim.Adam(p, lr=LR, weight_decay=WD),
-        'SGD':     lambda p: torch.optim.SGD(p, lr=LR, momentum=0.9, weight_decay=WD),
+        'Adam': lambda p: torch.optim.Adam(p, lr=LR, weight_decay=WD),
+        'AdamW': lambda p: torch.optim.AdamW(p, lr=LR, weight_decay=WD),
+        'SGD': lambda p: torch.optim.SGD(p, lr=LR, momentum=0.9, weight_decay=WD),
         'RMSprop': lambda p: torch.optim.RMSprop(p, lr=LR, weight_decay=WD)
     }
     runs = [
@@ -182,12 +191,12 @@ def main():
     ]
     save_test_data(runs, '../test_data/optimizer_comparison.csv')
     plot_optimizer_comparison(runs, 'Optimizer Comparison')
-    plot_test_accuracy(runs, 'Optimizer: Test Accuracy Comparison')
     best_opt = max(runs, key=lambda r: r['test_accuracy'])['name']
     best_opt_fn = optim_map[best_opt]
     print(f"Best optimizer: {best_opt}")
 
     # 2) Scheduler Comparison
+    print("Running scheduler comparison...")
     sched_map = {
         'None':            {},
         'StepLR':          {'scheduler_fn': lambda o: torch.optim.lr_scheduler.StepLR(o, step_size=10, gamma=0.1)},
@@ -209,13 +218,19 @@ def main():
     ]
     save_test_data(runs, '../test_data/scheduler_comparison.csv')
     plot_scheduler_comparison(runs, 'Scheduler Comparison')
-    plot_test_accuracy(runs, 'Scheduler: Test Accuracy Comparison')
     best_sched = max(runs, key=lambda r: r['test_f1_score'])['name']
     best_sched_fn = sched_map[best_sched].get('scheduler_fn')
     print(f"Best scheduler: {best_sched}")
 
     # 3) Regularization Comparison
-    reg_map = {'No WD': 0.0, 'WD=1e-5': 1e-5, 'WD=1e-4': 1e-4, 'WD=1e-3': 1e-3}
+    print("Running regularization comparison...")
+    reg_map = {
+        'No WD': 0.0,
+        'WD=1e-6': 1e-8,
+        'WD=1e-4': 1e-4,
+        'WD=1e-2': 1e-2,
+        'WD=1e-1': 1e-1,
+    }
     runs = [
         run_experiment(
             name, ARCHITECTURE, ds,
@@ -231,12 +246,12 @@ def main():
     ]
     save_test_data(runs, '../test_data/regularization_comparison.csv')
     plot_regularization_comparison(runs, 'Regularization Comparison')
-    plot_test_accuracy(runs, 'Regularization: Test Accuracy Comparison')
     best_reg = max(runs, key=lambda r: r['test_f1_score'])['name']
     best_wd  = reg_map[best_reg]
     print(f"Best weight decay: {best_reg}")
 
     # 4) Batch Size Comparison
+    print("Running batch size comparison...")
     batch_sizes = [64, 128, 256, 512, 1024]
     runs_bs = [
         run_experiment(
@@ -253,12 +268,19 @@ def main():
     ]
     save_test_data(runs_bs, '../test_data/batch_size_comparison.csv')
     plot_batch_size_comparison(runs_bs, 'Batch Size Comparison')
-    plot_test_accuracy(runs_bs, 'Batch Size: Test Accuracy Comparison')
     best_bs = max(runs_bs, key=lambda r: r['test_f1_score'])['batch_size']
     print(f"Best batch size: {best_bs}")
 
+    print(f"Best configuration ->  "
+          f"Architecture: {ARCHITECTURE}, "
+          f"Optimizer: {best_opt}, "
+          f"Scheduler: {best_sched}, "
+          f"Weight Decay: {best_reg}, "
+          f"Batch Size: {best_bs}")
+
     # 5) Architecture Comparison
-    best_lr = 1e-3
+    print("Running final architecture comparison...")
+    best_lr = 0.0001
     archs = [
         'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256',
         'EmnistCNN_8_32_64',  'EmnistCNN_16_64',
@@ -279,8 +301,20 @@ def main():
     ]
     save_test_data(runs, '../test_data/architecture_comparison.csv')
     plot_architecture_comparison(runs, 'Architecture Comparison')
-    plot_test_accuracy(runs, 'Architecture: Test Accuracy Comparison')
+    best_run = sorted(
+        runs,
+        key=lambda r: (
+            r['param_count'],  # first: smallest model
+            -r['test_f1_score']  # second: highest F1
+        )
+    )[0]
+    best_arch = best_run['name']
 
+    # 7) Plot of the best architecture by fold F1 score
+    plot_architecture_by_fold(
+        best_run['folds_data'],
+        f"Best Architecture: {best_arch} — Fold F1 Score Comparison"
+    )
 
 if __name__ == "__main__":
     main()

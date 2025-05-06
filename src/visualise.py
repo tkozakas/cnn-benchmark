@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix
 os.makedirs("../test_data/plot", exist_ok=True)
 
 
-def plot_optimizer_comparison(runs, title, loss_threshold=0.3):
+def plot_optimizer_comparison(runs, title, loss_threshold=0.5):
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     ax_train_loss, ax_val_loss, ax_val_acc, ax_speed = axes.flatten()
 
@@ -337,7 +337,6 @@ def plot_aggregated_learning_curves(all_results, metric_label, train_key, val_ke
     outpath = f"../test_data/plot/aggregated_{metric_label.replace(' ', '_')}.png"
     fig.savefig(outpath)
 
-
 def plot_confusion_matrix(model, loader, device, classes):
     all_preds = []
     all_labels = []
@@ -363,4 +362,60 @@ def plot_confusion_matrix(model, loader, device, classes):
     plt.tight_layout()
 
     outpath = "../test_data/plot/confusion_matrix.png"
+    fig.savefig(outpath)
+
+
+def plot_architecture_by_fold(folds_data, title):
+    """
+    Show per-fold performance for a single architecture:
+    1) Bar chart of test F1-score per fold
+    2) Training Accuracy vs Epoch for each fold
+    3) Validation Accuracy vs Epoch for each fold
+    4) Validation F1-score vs Epoch for each fold
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    ax_f1bar, ax_train_acc, ax_val_acc, ax_val_f1 = axes.flatten()
+
+    folds = list(range(1, len(folds_data) + 1))
+    test_f1s = [f['test_f1_score'] for f in folds_data]
+
+    # 1) Test F1-score per fold
+    ax_f1bar.bar(folds, test_f1s)
+    ax_f1bar.set_title('Test F1-score per Fold')
+    ax_f1bar.set_xlabel('Fold')
+    ax_f1bar.set_ylabel('F1-score')
+    ax_f1bar.set_xticks(folds)
+    ax_f1bar.grid(axis='y', linestyle='--', alpha=0.7)
+
+    epochs = range(1, len(folds_data[0]['train_accuracy']) + 1)
+    # 2) Train Accuracy vs Epoch
+    for idx, f in enumerate(folds_data, start=1):
+        ax_train_acc.plot(epochs, f['train_accuracy'], label=f'Fold {idx}')
+    ax_train_acc.set_title('Train Accuracy vs Epoch by Fold')
+    ax_train_acc.set_xlabel('Epoch')
+    ax_train_acc.set_ylabel('Accuracy')
+    ax_train_acc.grid(True)
+    ax_train_acc.legend(fontsize='small')
+
+    # 3) Val Accuracy vs Epoch
+    for idx, f in enumerate(folds_data, start=1):
+        ax_val_acc.plot(epochs, f['val_accuracy'], label=f'Fold {idx}')
+    ax_val_acc.set_title('Val Accuracy vs Epoch by Fold')
+    ax_val_acc.set_xlabel('Epoch')
+    ax_val_acc.set_ylabel('Accuracy')
+    ax_val_acc.grid(True)
+    ax_val_acc.legend(fontsize='small')
+
+    # 4) Val F1-score vs Epoch
+    for idx, f in enumerate(folds_data, start=1):
+        ax_val_f1.plot(epochs, f['f1_score'], label=f'Fold {idx}')
+    ax_val_f1.set_title('Val F1-score vs Epoch by Fold')
+    ax_val_f1.set_xlabel('Epoch')
+    ax_val_f1.set_ylabel('F1-score')
+    ax_val_f1.grid(True)
+    ax_val_f1.legend(fontsize='small')
+
+    fig.suptitle(title)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    outpath = f"../test_data/plot/{title.replace(' ', '_')}_by_fold.png"
     fig.savefig(outpath)
