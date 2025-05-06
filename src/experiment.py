@@ -191,7 +191,7 @@ def main():
     ]
     save_test_data(runs, '../test_data/optimizer_comparison.csv')
     plot_optimizer_comparison(runs, 'Optimizer Comparison')
-    best_opt = max(runs, key=lambda r: r['test_accuracy'])['name']
+    best_opt = max(runs, key=lambda r: r['test_f1_score'])['name']
     best_opt_fn = optim_map[best_opt]
     print(f"Best optimizer: {best_opt}")
 
