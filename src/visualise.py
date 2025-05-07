@@ -111,7 +111,7 @@ def plot_batch_size_comparison(runs, title, acc_target=0.9):
               'batch_size', name, 'gpu')
 
 
-def plot_architecture_comparison(runs, title, acc_target=0.9):
+def plot_architecture_comparison(runs, title, acc_target=0.85):
     name = title.replace(' ', '_')
     labels = [r['name'] for r in runs]
     _plot_line(runs, 'f1_score_curve', 'F1 rodiklis per epochas',
