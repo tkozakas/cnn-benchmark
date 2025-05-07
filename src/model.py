@@ -7,8 +7,8 @@ from config import model_config
 
 
 class EmnistCNN(nn.Module):
-    def __init__(self, fmaps1=32, fmaps2=64, fmaps3=None, dense=128, dropout=0.5,
-                 input_size=28, num_classes=10, activation=nn.LeakyReLU):
+    def __init__(self,  num_classes, fmaps1, fmaps2, dense, dropout,
+                 activation, input_size=28, fmaps3=None):
         super(EmnistCNN, self).__init__()
 
         # First Convolutional Block
@@ -80,7 +80,15 @@ def get_model(architecture, num_classes):
         from torchvision.models import resnet18
         model = resnet18(num_classes=num_classes)
         return model
-    return EmnistCNN(**model_config[architecture], num_classes=num_classes)
+    return EmnistCNN(
+        num_classes=num_classes,
+        fmaps1=model_config['fmaps1'],
+        fmaps2=model_config['fmaps2'],
+        fmaps3=model_config.get('fmaps3'),
+        dense=model_config['dense'],
+        dropout=model_config['dropout'],
+        activation=model_config['activation'],
+    )
 
 def save_model(model, path):
     project_root = Path(__file__).parent.parent.resolve()
