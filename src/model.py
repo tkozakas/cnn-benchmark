@@ -8,7 +8,7 @@ from config import model_config
 
 class EmnistCNN(nn.Module):
     def __init__(self,  num_classes, fmaps1, fmaps2, dense, dropout,
-                 activation, input_size=28, fmaps3=None):
+                 input_size=28, fmaps3=None, activation=nn.ReLU):
         super(EmnistCNN, self).__init__()
 
         # First Convolutional Block
@@ -82,12 +82,11 @@ def get_model(architecture, num_classes):
         return model
     return EmnistCNN(
         num_classes=num_classes,
-        fmaps1=model_config['fmaps1'],
-        fmaps2=model_config['fmaps2'],
-        fmaps3=model_config.get('fmaps3'),
-        dense=model_config['dense'],
-        dropout=model_config['dropout'],
-        activation=model_config['activation'],
+        fmaps1=model_config[architecture]['fmaps1'],
+        fmaps2=model_config[architecture]['fmaps2'],
+        fmaps3=model_config[architecture].get('fmaps3'),
+        dense=model_config[architecture]['dense'],
+        dropout=model_config[architecture]['dropout']
     )
 
 def save_model(model, path):
