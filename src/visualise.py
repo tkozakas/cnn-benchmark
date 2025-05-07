@@ -1,421 +1,177 @@
 import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import torch
 from sklearn.metrics import confusion_matrix
 
-os.makedirs("../test_data/plot", exist_ok=True)
+BASE_DIR = "../test_data/plot"
 
+def _save_plot(fig, category, name, suffix):
+    path = os.path.join(BASE_DIR, category)
+    os.makedirs(path, exist_ok=True)
+    fig.savefig(os.path.join(path, f"{name}_{suffix}.png"))
+    plt.close(fig)
+
+def _epochs(r):
+    return range(1, len(r['train_loss_curve']) + 1)
+
+def _plot_line(runs, key, title, xlabel, ylabel, category, name, suffix):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    for r in runs:
+        ax.plot(_epochs(r), r[key], label=r['name'])
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid(True)
+    ax.legend(fontsize='small')
+    _save_plot(fig, category, name, suffix)
+
+def _plot_bar(labels, values, title, xlabel, ylabel, category, name, suffix):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(labels, values)
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+    _save_plot(fig, category, name, suffix)
 
 def plot_optimizer_comparison(runs, title, loss_threshold=0.5):
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    ax_train_loss, ax_val_loss, ax_val_acc, ax_speed = axes.flatten()
-
-    for run in runs:
-        epochs = range(1, len(run['train_loss_curve']) + 1)
-        ax_train_loss.plot(epochs, run['train_loss_curve'], label=f"{run['name']} Train Loss")
-        ax_val_loss.plot(epochs, run['val_loss_curve'], label=f"{run['name']} Val Loss")
-        ax_val_acc.plot(epochs, run['val_accuracy_curve'], label=f"{run['name']} Val Acc")
-
-    ax_train_loss.set_title('Training Loss vs Epoch')
-    ax_train_loss.set_xlabel('Epoch')
-    ax_train_loss.set_ylabel('Loss')
-    ax_train_loss.grid(True)
-    ax_train_loss.legend(fontsize='small')
-
-    ax_val_loss.set_title('Validation Loss vs Epoch')
-    ax_val_loss.set_xlabel('Epoch')
-    ax_val_loss.set_ylabel('Loss')
-    ax_val_loss.grid(True)
-    ax_val_loss.legend(fontsize='small')
-
-    ax_val_acc.set_title('Validation Accuracy vs Epoch')
-    ax_val_acc.set_xlabel('Epoch')
-    ax_val_acc.set_ylabel('Accuracy')
-    ax_val_acc.grid(True)
-    ax_val_acc.legend(fontsize='small')
-
-    names = []
-    epochs_to_thresh = []
-    for run in runs:
-        try:
-            idx = next(i for i, v in enumerate(run['val_loss_curve'], start=1) if v <= loss_threshold)
-        except StopIteration:
-            idx = len(run['val_loss_curve'])
-        names.append(run['name'])
-        epochs_to_thresh.append(idx)
-
-    ax_speed.bar(names, epochs_to_thresh)
-    ax_speed.set_title(f'Epochs to reach Val Loss ≤ {loss_threshold}')
-    ax_speed.set_xlabel('Optimizer')
-    ax_speed.set_ylabel('Epochs')
-    ax_speed.grid(axis='y', linestyle='--', alpha=0.7)
-
-    fig.suptitle(f"{title} — Optimizer Comparison")
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-
-    outpath = f"../test_data/plot/{title.replace(' ', '_')}_optimizer_comparison.png"
-    fig.savefig(outpath)
-
+    name = title.replace(' ', '_')
+    _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
+               'Epochos', 'Nuostolis', 'optimizer', name, 'train_loss')
+    _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
+               'Epochos', 'Nuostolis', 'optimizer', name, 'val_loss')
+    _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
+               'Epochos', 'Tikslumas', 'optimizer', name, 'val_acc')
+    labels = [r['name'] for r in runs]
+    values = [
+        next((i for i,v in enumerate(r['val_loss_curve'],1) if v<=loss_threshold),
+             len(r['val_loss_curve']))
+        for r in runs
+    ]
+    _plot_bar(labels, values, f'Epochos iki nuostolio ≤ {loss_threshold}',
+              'Optimizatorius', 'Epochos', 'optimizer', name, 'speed')
 
 def plot_scheduler_comparison(runs, title):
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    ax_train_loss, ax_val_loss, ax_val_acc, ax_lr = axes.flatten()
-
-    for run in runs:
-        epochs = range(1, len(run['train_loss_curve']) + 1)
-        ax_train_loss.plot(epochs, run['train_loss_curve'], label=run['name'])
-        ax_val_loss.plot(epochs, run['val_loss_curve'], label=run['name'])
-        ax_val_acc.plot(epochs, run['val_accuracy_curve'], label=run['name'])
-        ax_lr.plot(epochs, run['lr_curve'], label=run['name'])
-
-    ax_train_loss.set_title('Training Loss vs Epoch')
-    ax_train_loss.set_xlabel('Epoch')
-    ax_train_loss.set_ylabel('Loss')
-    ax_train_loss.grid(True)
-    ax_train_loss.legend(fontsize='small')
-
-    ax_val_loss.set_title('Validation Loss vs Epoch')
-    ax_val_loss.set_xlabel('Epoch')
-    ax_val_loss.set_ylabel('Loss')
-    ax_val_loss.grid(True)
-    ax_val_loss.legend(fontsize='small')
-
-    ax_val_acc.set_title('Validation Accuracy vs Epoch')
-    ax_val_acc.set_xlabel('Epoch')
-    ax_val_acc.set_ylabel('Accuracy')
-    ax_val_acc.grid(True)
-    ax_val_acc.legend(fontsize='small')
-
-    ax_lr.set_title('Learning Rate vs Epoch')
-    ax_lr.set_xlabel('Epoch')
-    ax_lr.set_ylabel('Learning Rate')
-    ax_lr.grid(True)
-    ax_lr.legend(fontsize='small')
-
-    fig.suptitle(f"{title} — Scheduler Comparison")
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    outpath = f"../test_data/plot/{title.replace(' ', '_')}_scheduler_comparison.png"
-    fig.savefig(outpath)
-
+    name = title.replace(' ', '_')
+    _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
+               'Epochos', 'Nuostolis', 'scheduler', name, 'train_loss')
+    _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
+               'Epochos', 'Nuostolis', 'scheduler', name, 'val_loss')
+    _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
+               'Epochos', 'Tikslumas', 'scheduler', name, 'val_acc')
+    _plot_line(runs, 'lr_curve', 'Mokymosi greitis per epochas',
+               'Epochos', 'Greičio koeficientas', 'scheduler', name, 'lr')
 
 def plot_regularization_comparison(runs, title):
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    ax_train_loss, ax_val_loss, ax_val_acc, ax_gap = axes.flatten()
+    name = title.replace(' ', '_')
+    _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
+               'Epochos', 'Nuostolis', 'regularization', name, 'train_loss')
+    _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
+               'Epochos', 'Nuostolis', 'regularization', name, 'val_loss')
+    _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
+               'Epochos', 'Tikslumas', 'regularization', name, 'val_acc')
+    labels = [r['name'] for r in runs]
+    values = [
+        sum(r['train_accuracy_curve'][i] - r['val_accuracy_curve'][i]
+            for i in range(len(r['val_accuracy_curve'])))
+        for r in runs
+    ]
+    _plot_bar(labels, values, 'Bendroji spraga mokymas–validavimas',
+              'Regularizacija', 'Spraga', 'regularization', name, 'gap')
 
-    for run in runs:
-        epochs = range(1, len(run['train_loss_curve']) + 1)
-        ax_train_loss.plot(epochs, run['train_loss_curve'], label=run['name'])
-        ax_val_loss.plot(epochs, run['val_loss_curve'], label=run['name'])
-        ax_val_acc.plot(epochs, run['val_accuracy_curve'], label=run['name'])
-        gap = [v - t for t, v in zip(run['train_accuracy_curve'], run['val_accuracy_curve'])]
-        ax_gap.plot(epochs, gap, label=run['name'])
+def plot_batch_size_comparison(runs, title, acc_target=0.9):
+    name = title.replace(' ', '_')
+    labels = [str(r['batch_size']) for r in runs]
+    _plot_bar(labels, [r['training_time'] for r in runs],
+              'Visas mokymo laikas (s)', 'Batšo dydis', 'Sekundės',
+              'batch_size', name, 'time')
+    _plot_bar(labels, [r['avg_samples_per_sec'] for r in runs],
+              'Pralaidumas (pavyzdžių/s)', 'Batšo dydis', 'Pavyzdžiai/s',
+              'batch_size', name, 'throughput')
+    _plot_bar(labels, [r['avg_gpu_usage'] for r in runs],
+              'Vidutinis GPU naudojimas (%)', 'Batšo dydis', 'Procentai',
+              'batch_size', name, 'gpu')
+    values = [
+        next((i for i,v in enumerate(r['val_accuracy_curve'],1) if v>=acc_target),
+             len(r['val_accuracy_curve']))
+        for r in runs
+    ]
+    _plot_bar(labels, values, f'Epochos iki tikslumo ≥ {int(acc_target*100)}%',
+              'Batšo dydis', 'Epochos', 'batch_size', name, 'perf_time')
 
-    ax_train_loss.set_title('Training Loss vs Epoch')
-    ax_train_loss.set_xlabel('Epoch')
-    ax_train_loss.set_ylabel('Loss')
-    ax_train_loss.grid(True)
-    ax_train_loss.legend(fontsize='small')
-
-    ax_val_loss.set_title('Validation Loss vs Epoch')
-    ax_val_loss.set_xlabel('Epoch')
-    ax_val_loss.set_ylabel('Loss')
-    ax_val_loss.grid(True)
-    ax_val_loss.legend(fontsize='small')
-
-    ax_val_acc.set_title('Validation Accuracy vs Epoch')
-    ax_val_acc.set_xlabel('Epoch')
-    ax_val_acc.set_ylabel('Accuracy')
-    ax_val_acc.grid(True)
-    ax_val_acc.legend(fontsize='small')
-
-    ax_gap.set_title('Generalization Gap (Val Acc - Train Acc)')
-    ax_gap.set_xlabel('Epoch')
-    ax_gap.set_ylabel('Accuracy Gap')
-    ax_gap.grid(True)
-    ax_gap.legend(fontsize='small')
-
-    fig.suptitle(f"{title} — Regularization Comparison")
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    outpath = f"../test_data/plot/{title.replace(' ', '_')}_regularization_comparison.png"
-    fig.savefig(outpath)
-
-def plot_batch_size_comparison(runs, title):
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    ax_time, ax_throughput, ax_gpu, ax_acc = axes.flatten()
-
-    names = [str(run['batch_size']) for run in runs]
-    times = [run['training_time'] for run in runs]
-    throughputs = [run['avg_samples_per_sec'] for run in runs]
-    gpu_usages = [run['avg_gpu_usage'] for run in runs]
-    final_accs = [run['test_accuracy'] for run in runs]
-
-    ax_time.bar(names, times)
-    ax_time.set_title('Total Training Time (s)')
-    ax_time.set_xlabel('Batch Size')
-    ax_time.set_ylabel('Seconds')
-    ax_time.grid(axis='y', linestyle='--', alpha=0.7)
-
-    ax_throughput.bar(names, throughputs)
-    ax_throughput.set_title('Throughput (samples/sec)')
-    ax_throughput.set_xlabel('Batch Size')
-    ax_throughput.set_ylabel('Samples/sec')
-    ax_throughput.grid(axis='y', linestyle='--', alpha=0.7)
-
-    ax_gpu.bar(names, gpu_usages)
-    ax_gpu.set_title('Average GPU Utilization (%)')
-    ax_gpu.set_xlabel('Batch Size')
-    ax_gpu.set_ylabel('Utilization')
-    ax_gpu.grid(axis='y', linestyle='--', alpha=0.7)
-
-    ax_acc.bar(names, final_accs)
-    ax_acc.set_title('Final Test Accuracy')
-    ax_acc.set_xlabel('Batch Size')
-    ax_acc.set_ylabel('Accuracy')
-    ax_acc.grid(axis='y', linestyle='--', alpha=0.7)
-
-    fig.suptitle(f"{title} — Batch Size Comparison")
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    outpath = f"../test_data/plot/{title.replace(' ', '_')}_batch_size_comparison.png"
-    fig.savefig(outpath)
-
-def plot_learning_rate_comparison(runs, title):
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    ax_train_loss, ax_val_loss, ax_val_acc, ax_lr = axes.flatten()
-
-    for run in runs:
-        epochs = range(1, len(run['train_loss_curve']) + 1)
-        ax_train_loss.plot(epochs, run['train_loss_curve'], label=run['name'])
-        ax_val_loss.plot(epochs, run['val_loss_curve'],   label=run['name'])
-        ax_val_acc.plot(epochs, run['val_accuracy_curve'], label=run['name'])
-        ax_lr.plot(epochs, run['lr_curve'],                  label=run['name'])
-
-    ax_train_loss.set_title('Training Loss vs Epoch')
-    ax_train_loss.set_xlabel('Epoch')
-    ax_train_loss.set_ylabel('Loss')
-    ax_train_loss.grid(True)
-    ax_train_loss.legend(fontsize='small')
-
-    ax_val_loss.set_title('Validation Loss vs Epoch')
-    ax_val_loss.set_xlabel('Epoch')
-    ax_val_loss.set_ylabel('Loss')
-    ax_val_loss.grid(True)
-    ax_val_loss.legend(fontsize='small')
-
-    ax_val_acc.set_title('Validation Accuracy vs Epoch')
-    ax_val_acc.set_xlabel('Epoch')
-    ax_val_acc.set_ylabel('Accuracy')
-    ax_val_acc.grid(True)
-    ax_val_acc.legend(fontsize='small')
-
-    ax_lr.set_title('Learning Rate vs Epoch')
-    ax_lr.set_xlabel('Epoch')
-    ax_lr.set_ylabel('Learning Rate')
-    ax_lr.grid(True)
-    ax_lr.legend(fontsize='small')
-
-    fig.suptitle(f"{title} — Learning Rate Comparison")
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    outpath = f"../test_data/plot/{title.replace(' ', '_')}_lr_comparison.png"
-    fig.savefig(outpath)
-
-# Architecture comparison visualization
-def plot_architecture_comparison(runs, title, acc_threshold=None):
-    """
-    Visualize final architecture performance:
-    1) Test Accuracy (bar chart)
-    2) Params vs Test Accuracy (scatter plot)
-    3) Inference Latency (bar chart)
-    4) Training Time to reach acc_threshold (bar chart)
-    If acc_threshold is None, uses total training_time.
-    """
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    ax_acc, ax_params, ax_latency, ax_time = axes.flatten()
-
-    names = [run['name'] for run in runs]
-    accuracies = [run['test_accuracy'] for run in runs]
-    params = [run.get('param_count') for run in runs]
-    latencies = [run.get('inference_latency') for run in runs]
-    # compute time to threshold or total training time
-    times = []
-    for run in runs:
-        if acc_threshold is not None and 'val_accuracy_curve' in run:
-            # find first epoch reaching threshold
-            try:
-                idx = next(i for i, v in enumerate(run['val_accuracy_curve'], start=1) if v >= acc_threshold)
-                # sum epoch_time_curve up to idx
-                t = sum(run.get('epoch_time_curve', [])[:idx])
-            except StopIteration:
-                t = sum(run.get('epoch_time_curve', []))
-        else:
-            t = run.get('training_time')
-        times.append(t)
-
-    # 1) Test Accuracy
-    ax_acc.bar(names, accuracies)
-    ax_acc.set_title('Final Test Accuracy')
-    ax_acc.set_xlabel('Architecture')
-    ax_acc.set_ylabel('Accuracy')
-    ax_acc.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.setp(ax_acc.get_xticklabels(), rotation=45, ha='right')
-
-    # 2) Params vs Accuracy scatter
-    ax_params.scatter(params, accuracies)
-    for name, x, y in zip(names, params, accuracies):
-        ax_params.text(x, y, name, fontsize=8, ha='right')
-    ax_params.set_title('Params vs Test Accuracy')
-    ax_params.set_xlabel('Parameter Count')
-    ax_params.set_ylabel('Accuracy')
-    ax_params.grid(True)
-
-    # 3) Inference Latency
-    ax_latency.bar(names, latencies)
-    ax_latency.set_title('Inference Latency (ms)')
-    ax_latency.set_xlabel('Architecture')
-    ax_latency.set_ylabel('Latency (ms)')
-    ax_latency.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.setp(ax_latency.get_xticklabels(), rotation=45, ha='right')
-
-    # 4) Training Time to X% or total
-    xlabel = f"Time to reach {acc_threshold*100:.1f}% Acc" if acc_threshold else 'Total Training Time (s)'
-    ax_time.bar(names, times)
-    ax_time.set_title(xlabel)
-    ax_time.set_xlabel('Architecture')
-    ax_time.set_ylabel('Seconds')
-    ax_time.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.setp(ax_time.get_xticklabels(), rotation=45, ha='right')
-
-    fig.suptitle(f"{title} — Architecture Comparison")
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    outpath = f"../test_data/plot/{title.replace(' ', '_')}_architecture_comparison.png"
-    fig.savefig(outpath)
+def plot_architecture_comparison(runs, title, acc_target=0.9):
+    name = title.replace(' ', '_')
+    labels = [r['name'] for r in runs]
+    _plot_bar(labels, [r['test_accuracy'] for r in runs],
+              'Galutinis testavimo tikslumas', 'Architektūra', 'Tikslumas',
+              'architecture', name, 'accuracy')
+    fig, ax = plt.subplots(figsize=(8,6))
+    params = [r['param_count'] for r in runs]
+    accs = [r['test_accuracy'] for r in runs]
+    ax.scatter(params, accs)
+    for n,x,y in zip(labels, params, accs):
+        ax.text(x,y,n,fontsize=8,ha='right')
+    ax.set_title('Parametrų skaičius vs tikslumas')
+    ax.set_xlabel('Parametrų skaičius')
+    ax.set_ylabel('Tikslumas')
+    ax.grid(True)
+    _save_plot(fig, 'architecture', name, 'params')
+    _plot_bar(labels, [r['inference_latency'] for r in runs],
+              'Inferencijos vėlinimas (ms)', 'Architektūra', 'Milisekundės',
+              'architecture', name, 'latency')
+    values = [
+        sum(r['epoch_time_curve'][: next((i for i,v in enumerate(r['val_accuracy_curve'],1) if v>=acc_target),
+                                        len(r['val_accuracy_curve']))])
+        for r in runs
+    ]
+    _plot_bar(labels, values, f'Laikas iki tikslumo ≥ {int(acc_target*100)}%',
+              'Architektūra', 'Sekundės', 'architecture', name, 'time_to_acc')
 
 def plot_test_accuracy(runs, title):
-    names = [r['name'] for r in runs]
-    accs  = [r['test_accuracy'] for r in runs]
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.bar(names, accs)
-    plt.xticks(rotation=45, ha='right')
-    plt.title(title)
-    plt.xlabel('Configuration')
-    plt.ylabel('Average Test Accuracy')
-    plt.tight_layout()
-
-    outpath = f"../test_data/plot/{title.replace(' ', '_')}_accuracy.png"
-    fig.savefig(outpath)
-
-
-def plot_aggregated_learning_curves(all_results, metric_label, train_key, val_key):
-    max_epochs = max(len(result[train_key]) for result in all_results)
-
-    def pad_metric(metric, max_length):
-        return metric + [metric[-1]] * (max_length - len(metric))
-
-    train_values = np.array([pad_metric(result[train_key], max_epochs) for result in all_results])
-    val_values   = np.array([pad_metric(result[val_key],   max_epochs) for result in all_results])
-
-    train_mean = train_values.mean(axis=0)
-    train_std  = train_values.std(axis=0)
-    val_mean   = val_values.mean(axis=0)
-    val_std    = val_values.std(axis=0)
-
-    epochs = range(1, max_epochs + 1)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(epochs, train_mean, label=f"Train {metric_label}")
-    ax.fill_between(epochs, train_mean - train_std, train_mean + train_std, alpha=0.2)
-    ax.plot(epochs, val_mean,   label=f"Validation {metric_label}")
-    ax.fill_between(epochs, val_mean - val_std,   val_mean + val_std,   alpha=0.2)
-    ax.set_title(f"Average {metric_label} Across Epochs")
-    ax.set_xlabel("Epochs")
-    ax.set_ylabel(metric_label)
-    ax.legend(loc="best")
-    ax.grid(True)
-    plt.tight_layout()
-
-    outpath = f"../test_data/plot/aggregated_{metric_label.replace(' ', '_')}.png"
-    fig.savefig(outpath)
-
-def plot_confusion_matrix(model, loader, device, classes):
-    all_preds = []
-    all_labels = []
-
-    model.eval()
-    model.to(device)
-    with torch.no_grad():
-        for images, labels in loader:
-            images = images.to(device)
-            outputs = model(images)
-            preds = outputs.argmax(dim=1).cpu().numpy()
-            all_preds.extend(preds)
-            all_labels.extend(labels.numpy())
-
-    cm = confusion_matrix(all_labels, all_preds)
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=classes, yticklabels=classes,
-                annot_kws={"size": 7}, ax=ax)
-    ax.set_xlabel('Predicted Label')
-    ax.set_ylabel('True Label')
-    ax.set_title('Confusion Matrix')
-    plt.tight_layout()
-
-    outpath = "../test_data/plot/confusion_matrix.png"
-    fig.savefig(outpath)
-
+    name = title.replace(' ', '_')
+    _plot_bar([r['name'] for r in runs], [r['test_accuracy'] for r in runs],
+              'Testavimo tikslumas', 'Konfigūracija', 'Tikslumas',
+              'test_accuracy', name, 'accuracy')
 
 def plot_architecture_by_fold(folds_data, title):
-    """
-    Show per-fold performance for a single architecture:
-    1) Bar chart of test F1-score per fold
-    2) Training Accuracy vs Epoch for each fold
-    3) Validation Accuracy vs Epoch for each fold
-    4) Validation F1-score vs Epoch for each fold
-    """
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    ax_f1bar, ax_train_acc, ax_val_acc, ax_val_f1 = axes.flatten()
+    name = title.replace(' ', '_')
+    folds = list(range(1, len(folds_data)+1))
+    _plot_bar(folds, [f['test_f1_score'] for f in folds_data],
+              'F1 pagal foldus', 'Foldas', 'F1 rodiklis',
+              'architecture', name, 'by_fold')
+    for key, t, y in [
+        ('train_accuracy', 'Mokymo tikslumas per epochas', 'Tikslumas'),
+        ('val_accuracy',   'Validavimo tikslumas per epochas', 'Tikslumas'),
+        ('f1_score',       'Validavimo F1 per epochas',       'F1 rodiklis'),
+    ]:
+        fig, ax = plt.subplots(figsize=(8,6))
+        epochs = range(1, len(folds_data[0][key])+1)
+        for idx, f in enumerate(folds_data,1):
+            ax.plot(epochs, f[key], label=f'Fold {idx}')
+        ax.set_title(t)
+        ax.set_xlabel('Epochos')
+        ax.set_ylabel(y)
+        ax.grid(True)
+        ax.legend(fontsize='small')
+        _save_plot(fig, 'architecture', name, key)
 
-    folds = list(range(1, len(folds_data) + 1))
-    test_f1s = [f['test_f1_score'] for f in folds_data]
-
-    # 1) Test F1-score per fold
-    ax_f1bar.bar(folds, test_f1s)
-    ax_f1bar.set_title('Test F1-score per Fold')
-    ax_f1bar.set_xlabel('Fold')
-    ax_f1bar.set_ylabel('F1-score')
-    ax_f1bar.set_xticks(folds)
-    ax_f1bar.grid(axis='y', linestyle='--', alpha=0.7)
-
-    epochs = range(1, len(folds_data[0]['train_accuracy']) + 1)
-    # 2) Train Accuracy vs Epoch
-    for idx, f in enumerate(folds_data, start=1):
-        ax_train_acc.plot(epochs, f['train_accuracy'], label=f'Fold {idx}')
-    ax_train_acc.set_title('Train Accuracy vs Epoch by Fold')
-    ax_train_acc.set_xlabel('Epoch')
-    ax_train_acc.set_ylabel('Accuracy')
-    ax_train_acc.grid(True)
-    ax_train_acc.legend(fontsize='small')
-
-    # 3) Val Accuracy vs Epoch
-    for idx, f in enumerate(folds_data, start=1):
-        ax_val_acc.plot(epochs, f['val_accuracy'], label=f'Fold {idx}')
-    ax_val_acc.set_title('Val Accuracy vs Epoch by Fold')
-    ax_val_acc.set_xlabel('Epoch')
-    ax_val_acc.set_ylabel('Accuracy')
-    ax_val_acc.grid(True)
-    ax_val_acc.legend(fontsize='small')
-
-    # 4) Val F1-score vs Epoch
-    for idx, f in enumerate(folds_data, start=1):
-        ax_val_f1.plot(epochs, f['f1_score'], label=f'Fold {idx}')
-    ax_val_f1.set_title('Val F1-score vs Epoch by Fold')
-    ax_val_f1.set_xlabel('Epoch')
-    ax_val_f1.set_ylabel('F1-score')
-    ax_val_f1.grid(True)
-    ax_val_f1.legend(fontsize='small')
-
-    fig.suptitle(title)
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    outpath = f"../test_data/plot/{title.replace(' ', '_')}_by_fold.png"
-    fig.savefig(outpath)
+def plot_confusion_matrix(model, loader, device, classes):
+    name = "confusion_matrix"
+    fig, ax = plt.subplots(figsize=(8, 8))
+    preds, labels = [], []
+    model.eval(); model.to(device)
+    with torch.no_grad():
+        for imgs, lbls in loader:
+            imgs = imgs.to(device)
+            out = model(imgs).argmax(dim=1).cpu().numpy()
+            preds.extend(out); labels.extend(lbls.numpy())
+    cm = confusion_matrix(labels, preds)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=classes, yticklabels=classes, ax=ax)
+    ax.set_xlabel('Prognozuojama klasė')
+    ax.set_ylabel('Tikroji klasė')
+    ax.set_title('Sumaišties matrica')
+    _save_plot(fig, "confusion", name, "cm")

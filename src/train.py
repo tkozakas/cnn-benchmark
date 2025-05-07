@@ -47,7 +47,6 @@ from model import get_model, save_model, load_model
 from utility import get_transforms
 from utility import parse_args, get_subsample
 from visualise import (
-    plot_aggregated_learning_curves,
     plot_confusion_matrix
 )
 
@@ -332,7 +331,7 @@ def main():
     ds = get_subsample(full, SUBSAMPLE_SIZE)
 
     # train + CV
-    all_results, avg_results = train(
+    all_results, _ = train(
         device=DEVICE,
         architecture=ARCHITECTURE,
         dataset=ds,
@@ -346,14 +345,6 @@ def main():
         cpu_workers=CPU_WORKERS,
         optimizer_fn=optim.Adam,
         scheduler_fn=None,
-    )
-
-    print("\nPlotting results...")
-    plot_aggregated_learning_curves(
-        all_results, "Accuracy", "train_accuracy", "val_accuracy"
-    )
-    plot_aggregated_learning_curves(
-        all_results, "Loss", "train_loss", "val_loss"
     )
 
     # final confusion + test metrics
