@@ -243,7 +243,7 @@ def main():
     save_test_data(runs, '../test_data/scheduler_comparison.csv')
     plot_scheduler_comparison(runs, 'Scheduler Comparison')
     best_sched = max(runs, key=lambda r: r['test_f1_score'])['name']
-    best_sched_fn = sched_map[best_sched].get('scheduler_fn')
+    best_sched_fn = sched_map[best_sched]
     print(f"Best scheduler: {best_sched}")
 
     # 4) Regularization Comparison
