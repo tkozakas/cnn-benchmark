@@ -137,10 +137,8 @@ def plot_test_accuracy(runs, title):
 
 def plot_architecture_by_fold(folds_data, title):
     name = title.replace(' ', '_')
-    folds = list(range(1, len(folds_data)+1))
-    _plot_bar(folds, [f['f1_score_curve'] for f in folds_data],
-              'F1 rodiklis per epochas', 'Foldai', 'F1 rodiklis',
-              'architecture', name, 'f1_score')
+    _plot_line(folds_data, 'f1_score', 'F1 rodiklis per epochas',
+                'Epochos', 'F1 rodiklis', 'architecture', name, 'f1_score')
     for key, t, y in [
         ('train_accuracy', 'Mokymo tikslumas per epochas', 'Tikslumas'),
         ('val_accuracy',   'Validavimo tikslumas per epochas', 'Tikslumas'),
