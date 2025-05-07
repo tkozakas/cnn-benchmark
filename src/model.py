@@ -80,7 +80,7 @@ def get_model(architecture, num_classes):
         from torchvision.models import resnet18
         model = resnet18(num_classes=num_classes)
         return model
-    return EmnistCNN(**model_config[architecture])
+    return EmnistCNN(**model_config[architecture], num_classes=num_classes)
 
 def save_model(model, path):
     project_root = Path(__file__).parent.parent.resolve()
