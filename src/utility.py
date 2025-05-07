@@ -32,7 +32,6 @@ def get_emnist_class_num(emnist_type):
 def parse_args(args):
     """Parse command line arguments"""
     ARCHITECTURE = args['--architecture']
-    K            = int(args['--k-folds'])
     N            = int(args['--epochs'])
     B            = int(args['--batch-size'])
     LR           = float(args['--lr'])
@@ -41,6 +40,7 @@ def parse_args(args):
     DEVICE       = args['--device']
     EMNIST_TYPE  = args['--emnist-type']
 
+    K = None if args['--k-folds'] is None or args['--k-folds'].lower() == 'none' else int(args['--k-folds'])
     PAT = None if args['--patience'] is None or args['--patience'].lower() == 'none' else int(args['--patience'])
     SUBSAMPLE_SIZE = None if args['--subsample-size'] is None or args['--subsample-size'].lower() == 'none' else int(
         args['--subsample-size'])

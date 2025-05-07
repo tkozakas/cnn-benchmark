@@ -169,10 +169,14 @@ def init_model_optimizer_scheduler(model_fn, learning_rate,
     return model, optimizer, scheduler
 
 
-def train(architecture, dataset, model_fn,
-          k_folds, epochs,
-          batch_size, learning_rate,
-          weight_decay,
+def train(architecture,
+          dataset,
+          model_fn,
+          k_folds=None,
+          epochs=10,
+          batch_size=128,
+          learning_rate=1e-3,
+          weight_decay=1e-4,
           optimizer_fn=None,
           scheduler_fn=None,
           criterion=None,
@@ -180,49 +184,61 @@ def train(architecture, dataset, model_fn,
           device='cuda',
           cpu_workers=4,
           random_state=42):
+
     device = torch.device(device)
     criterion = criterion or nn.CrossEntropyLoss()
-    kfold = KFold(
-        n_splits=k_folds,
-        shuffle=True,
-        random_state=random_state
-    )
+
+    if k_folds is None:
+        val_frac = train_config["val_split"]
+        n = len(dataset)
+        n_val = int(n * val_frac)
+        n_train = n - n_val
+
+        # reproducible split
+        train_subset, val_subset = torch.utils.data.random_split(
+            dataset,
+            [n_train, n_val],
+            generator=torch.Generator().manual_seed(random_state)
+        )
+        folds = [(train_subset.indices, val_subset.indices)]
+    else:
+        kfold = KFold(n_splits=k_folds, shuffle=True, random_state=random_state)
+        folds = list(kfold.split(dataset))
+
     all_results = []
     total_start = time.time()
 
-    for fold, (train_idx, test_idx) in enumerate(kfold.split(dataset), start=1):
-        # Number of samples in this fold’s training split
-        num_train_samples = len(train_idx)
-
+    for fold_idx, (train_idx, test_idx) in enumerate(folds, start=1):
         # DataLoaders
+        num_train_samples = len(train_idx)
         train_loader, val_loader, test_loader = get_data_loaders(
             dataset, train_idx, test_idx,
             batch_size, cpu_workers
         )
 
-        # Initialize model, optimizer, scheduler
+        # Init model/optimizer/scheduler
         model, optimizer, scheduler = init_model_optimizer_scheduler(
             model_fn, learning_rate, weight_decay,
             optimizer_fn, scheduler_fn, device
         )
 
-        # Count trainable params
+        # count params once
         param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
         best_val_loss = float('inf')
-        patience_cnt = 0
+        patience_cnt  = 0
 
-        # History containers
+        # history per epoch
         history = {
             'train_loss': [], 'train_accuracy': [],
             'val_loss':   [], 'val_accuracy':   [],
-            'f1_score': [], 'precision': [], 'recall': [],
-            'lr': [], 'epoch_time': [],
-            'cpu_usage': [], 'gpu_usage': [],
+            'f1_score':   [], 'precision':      [], 'recall':        [],
+            'lr':          [], 'epoch_time':     [],
+            'cpu_usage':   [], 'gpu_usage':      [],
             'samples_per_sec': []
         }
 
-        # --- Per-epoch training loop ---
+        # --- training loop ---
         for epoch in range(1, epochs+1):
             t0 = time.time()
             tloss, tacc, cpu_peak, gpu_peak = train_one_epoch(
@@ -237,7 +253,7 @@ def train(architecture, dataset, model_fn,
             # Throughput = samples / second
             throughput = num_train_samples / epoch_duration
 
-            # Record epoch metrics
+            # record
             history['train_loss'].append(tloss)
             history['train_accuracy'].append(tacc)
             history['val_loss'].append(vloss)
@@ -251,7 +267,7 @@ def train(architecture, dataset, model_fn,
             history['cpu_usage'].append(cpu_peak)
             history['gpu_usage'].append(gpu_peak)
 
-            # Step scheduler and early stop
+            # step & early stop
             if scheduler:
                 scheduler.step()
             if early_stopping_patience is not None:
@@ -260,61 +276,55 @@ def train(architecture, dataset, model_fn,
                 else:
                     patience_cnt += 1
                     if patience_cnt >= early_stopping_patience:
-                        print(f"Early stopping at epoch {epoch} (patience: {patience_cnt})")
+                        print(f"Early stopping at epoch {epoch}")
                         break
 
-            print(
-                f"Fold {fold} | Epoch {epoch}/{epochs} | "
-                f"Train Loss: {tloss:.3f} | Train Acc: {tacc:.3f} | "
-                f"Val Loss: {vloss:.3f} | Val Acc: {vacc:.3f} | "
-                f"F1: {f1:.3f} | CPU: {cpu_peak:.1f}% | GPU: {gpu_peak:.1f}% | "
-                f"Time: {epoch_duration:.2f}s"
-            )
+            print(f"Fold {fold_idx} | Epoch {epoch}/{epochs} | "
+                  f"Train Loss: {tloss:.3f} | Train Acc: {tacc:.3f} | "
+                  f"Val Loss: {vloss:.3f} | Val Acc: {vacc:.3f} | "
+                  f"F1: {f1:.3f} | CPU: {cpu_peak:.1f}% | GPU: {gpu_peak:.1f}% | "
+                  f"Time: {epoch_duration:.2f}s")
 
-        # --- End of epochs: evaluate on test set ---
+        # --- after training, evaluate on test set ---
         tloss, tacc, tp, fp, prec, rec, f1 = evaluate_and_metrics(
             model, test_loader, criterion, device
         )
-        print(f"Test | Loss: {tloss:.3f} | Acc: {tacc:.3f} | Prec: {prec:.3f} | Rec: {rec:.3f} | F1: {f1:.3f}")
+        print(f"Test | Loss: {tloss:.3f} | Acc: {tacc:.3f} | "
+              f"Prec: {prec:.3f} | Rec: {rec:.3f} | F1: {f1:.3f}")
 
-        # Measure inference latency per sample
+        # inference latency
         model.eval()
-        # Warm-up (esp. for GPU)
-        dummy_input = next(iter(test_loader))[0].to(device)
+        dummy = next(iter(test_loader))[0].to(device)
         with torch.no_grad():
             for _ in range(5):
-                _ = model(dummy_input)
-        # Timed full pass
+                _ = model(dummy)
         start_inf = time.time()
         total_samples = 0
         with torch.no_grad():
             for xb, _ in test_loader:
-                bs = xb.size(0)
-                total_samples += bs
+                total_samples += xb.size(0)
                 _ = model(xb.to(device))
-        inf_elapsed = time.time() - start_inf
-        inference_latency = inf_elapsed / total_samples
+        inf_latency = (time.time() - start_inf) / total_samples
 
-        # Collect final test + fold metadata
         history.update({
-            'test_loss': tloss,
-            'test_accuracy': tacc,
-            'test_precision': prec,
-            'test_recall': rec,
-            'test_f1_score': f1,
+            'test_loss':        tloss,
+            'test_accuracy':    tacc,
+            'test_precision':   prec,
+            'test_recall':      rec,
+            'test_f1_score':    f1,
         })
 
-        save_model(model, f"{architecture}_fold{fold}.pth")
+        save_model(model, f"{architecture}_fold{fold_idx}.pth")
         all_results.append({
-            'fold': fold,
-            'param_count': param_count,
-            'inference_latency': inference_latency,
+            'fold': fold_idx,
+            'param_count':       param_count,
+            'inference_latency': inf_latency,
             **history
         })
 
-    total_time = time.time() - total_start
-    print(f"Total training time across all folds: {total_time:.2f}s")
+    print(f"Total training time: {time.time() - total_start:.2f}s")
     return all_results
+
 
 def main():
     print("Starting training...")
