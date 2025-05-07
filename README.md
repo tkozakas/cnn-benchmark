@@ -121,11 +121,11 @@ You can omit these if you don’t need the outputs locally.
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
   mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/cnn-benchmark/test_data \
-  ~/Documents/cnn-benchmark/test_data
+  ~/Documents/cnn-benchmark/
 ```
 2. Copy trained model from the supercomputer to your local machine
 ```bash
 scp -i ~/.ssh/id_ed25519 -r \
   mifvu_username@hpc.mif.vu.lt:/scratch/lustre/home/mifvu_username/cnn-benchmark/trained \
-  ~/Documents/cnn-benchmark/trained
+  ~/Documents/cnn-benchmark/
 ```
