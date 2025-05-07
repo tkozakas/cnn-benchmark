@@ -84,6 +84,10 @@ def get_model(architecture, num_classes, activation=nn.ReLU):
         from torchvision.models import resnet18
         model = resnet18(num_classes=num_classes)
         return model
+    elif architecture == 'ResNet50':
+        from torchvision.models import resnet50
+        model = resnet50(num_classes=num_classes)
+        return model
     return EmnistCNN(
         num_classes=num_classes,
         fmaps1=model_config[architecture]['fmaps1'],

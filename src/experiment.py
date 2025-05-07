@@ -337,7 +337,7 @@ def main():
     print("Running final architecture comparison...")
     archs = [
         'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256', 'EmnistCNN_16_64',
-        'EmnistCNN_32_128', 'GoogleNet', 'ResNet18'
+        'EmnistCNN_32_128', 'GoogleNet', 'ResNet18', 'ResNet50'
     ]
     runs = [
         run_experiment(
@@ -368,6 +368,66 @@ def main():
         best_run['folds_data'],
         f"Best Architecture: {best_arch} — Fold F1 Score Comparison"
     )
+
+    # 9) Auto-tune core hyperparameters with Optuna
+    import optuna
+
+    def objective(trial):
+        # sample
+        lr   = trial.suggest_loguniform("lr",   1e-5, 1e-2)
+        wd   = trial.suggest_loguniform("wd",   1e-6, 1e-2)
+        bs   = trial.suggest_categorical("batch_size", [64, 128, 256])
+        opt_name = trial.suggest_categorical("optimizer", list(optim_map.keys()))
+        sched_name = trial.suggest_categorical("scheduler", list(sched_map.keys()))
+        act_name   = trial.suggest_categorical("activation", list(act_map.keys()))
+
+        # look up functions
+        opt_fn   = optim_map[opt_name]
+        sched_fn = sched_map[sched_name]
+        act_fn   = act_map[act_name]
+
+        # run a single-config experiment
+        run = run_experiment(
+            f"HPO_trial_{trial.number}",
+            ARCHITECTURE, EMNIST_TYPE, ds,
+            k_folds=K, epochs=N, batch_size=bs,
+            learning_rate=lr, optimizer_fn=opt_fn,
+            scheduler_fn=sched_fn, activation_fn=act_fn,
+            weight_decay=wd, early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS, device=DEVICE
+        )
+        return run['test_f1_score']
+
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=30, show_progress_bar=True)
+    print("⇒  Best HPO params:", study.best_params)
+
+    # 10) Re-run architecture comparison with best HPO settings
+    best = study.best_params
+    runs = [
+        run_experiment(
+            arch, arch, EMNIST_TYPE, ds,
+            k_folds=K, epochs=N, batch_size=best["batch_size"],
+            learning_rate=best["lr"],
+            optimizer_fn=optim_map[best["optimizer"]],
+            scheduler_fn=sched_map[best["scheduler"]],
+            activation_fn=act_map[best["activation"]],
+            weight_decay=best["wd"],
+            early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS, device=DEVICE
+        )
+        for arch in archs
+    ]
+    plot_architecture_comparison(runs, 'Architecture Comparison (HPO)')
+    best_run = sorted(
+        runs,
+        key=lambda r: (r['param_count'], -r['test_f1_score'])
+    )[0]
+    plot_architecture_by_fold(
+        best_run['folds_data'],
+        f"Best Architecture (HPO): {best_run['name']} — Fold F1 Comparison"
+    )
+
 
 if __name__ == "__main__":
     main()

@@ -55,4 +55,6 @@ model_config = {
     },
     "ResNet18" : {
     },
+    "ResNet50" : {
+    },
 }
