@@ -40,7 +40,8 @@ from train import train, transform
 from utility import get_emnist_class_num
 from utility import parse_args, get_subsample
 from visualise import plot_architecture_comparison, plot_optimizer_comparison, plot_scheduler_comparison, \
-    plot_regularization_comparison, plot_batch_size_comparison, plot_architecture_by_fold, plot_learning_rate_comparison
+    plot_regularization_comparison, plot_batch_size_comparison, plot_architecture_by_fold, plot_learning_rate_comparison, \
+    plot_activation_function_comparison
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
@@ -296,13 +297,6 @@ def main():
     best_bs = max(runs_bs, key=lambda r: r['test_f1_score'])['batch_size']
     print(f"Best batch size: {best_bs}")
 
-    print(f"Best configuration ->  "
-          f"Architecture: {ARCHITECTURE}, "
-          f"Optimizer: {best_opt}, "
-          f"Scheduler: {best_sched}, "
-          f"Weight Decay: {best_reg}, "
-          f"Batch Size: {best_bs}")
-
     # 6) Activation Function Comparison
     print("Running activation function comparison...")
     act_map = {
@@ -326,6 +320,18 @@ def main():
         for name, act_fn in act_map.items()
     ]
     plot_activation_function_comparison(runs, 'Activation Function Comparison')
+    best_act = max(runs, key=lambda r: r['test_f1_score'])['name']
+    print(f"Best configuration ->  "
+          f"Architecture: {ARCHITECTURE}, "
+          f"Optimizer: {best_opt}, "
+          f"Scheduler: {best_sched}, "
+          f"Weight Decay: {best_reg}, "
+          f"Batch Size: {best_bs}, "
+          f"Activation: {best_act}, "
+          f"Learning Rate: {LR}, "
+          f"Epochs: {N}, "
+          f"Patience: {PAT}, "
+          f"Subsample Size: {SUBSAMPLE_SIZE}")
 
     # 7) Architecture Comparison
     print("Running final architecture comparison...")
@@ -337,7 +343,7 @@ def main():
         run_experiment(
             arch, arch, EMNIST_TYPE, ds,
             k_folds=K, epochs=N, batch_size=best_bs,
-            learning_rate=LR, optimizer_fn=best_opt_fn,
+            learning_rate=LR, optimizer_fn=best_opt_fn, activation_fn=best_act,
             scheduler_fn=best_sched_fn,
             weight_decay=best_wd,
             early_stopping_patience=PAT,
