@@ -39,6 +39,19 @@ def _plot_bar(labels, values, title, xlabel, ylabel, category, name, suffix):
     fig.subplots_adjust(bottom=0.25)
     _save_plot(fig, category, name, suffix)
 
+def plot_learning_rate_comparison(runs, title):
+    name = title.replace(' ', '_')
+    fig3, ax3 = plt.subplots(figsize=(8, 6))
+    for r in runs:
+        ax3.plot(_epochs(r), r['train_accuracy_curve'], label=r['name'])
+    ax3.set_title('Mokymo tikslumas per epochas')
+    ax3.set_xlabel('Epochos')
+    ax3.set_ylabel('Tikslumas')
+    ax3.grid(True)
+    ax3.legend(fontsize='small')
+    _save_plot(fig3, "learning_rate", name, "train_acc")
+
+
 def plot_optimizer_comparison(runs, title, loss_threshold=0.3):
     name = title.replace(' ', '_')
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',

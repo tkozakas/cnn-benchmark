@@ -36,11 +36,11 @@ from docopt import docopt
 from torchvision import datasets
 
 from model import get_model
-from utility import get_emnist_class_num
 from train import train, transform
+from utility import get_emnist_class_num
 from utility import parse_args, get_subsample
 from visualise import plot_architecture_comparison, plot_optimizer_comparison, plot_scheduler_comparison, \
-    plot_regularization_comparison, plot_batch_size_comparison, plot_architecture_by_fold
+    plot_regularization_comparison, plot_batch_size_comparison, plot_architecture_by_fold, plot_learning_rate_comparison
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
@@ -170,7 +170,31 @@ def main():
     )
     ds = get_subsample(full, SUBSAMPLE_SIZE)
 
-    # 1) Optimizer Comparison
+    # 1) Learning rate comparison
+    print("Running learning rate comparison...")
+    lr_map = {
+        '1e-5': 1e-5,
+        '1e-4': 1e-4,
+        '1e-3': 1e-3,
+        '1e-2': 1e-2,
+        '1e-1': 1e-1,
+    }
+    runs = [
+        run_experiment(
+            name, ARCHITECTURE, EMNIST_TYPE, ds,
+            k_folds=K, epochs=N, batch_size=B,
+            learning_rate=lr,
+            optimizer_fn=None,
+            weight_decay=WD,
+            early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS,
+            device=DEVICE
+        )
+        for name, lr in lr_map.items()
+    ]
+    plot_learning_rate_comparison(runs, 'Learning Rate Comparison')
+
+    # 2) Optimizer Comparison
     print("Running optimizer comparison...")
     optim_map = {
         'Adam': lambda p: torch.optim.Adam(p, lr=LR, weight_decay=WD),
@@ -196,26 +220,25 @@ def main():
     best_opt_fn = optim_map[best_opt]
     print(f"Best optimizer: {best_opt}")
 
-    # 2) Scheduler Comparison
+    # 3) Scheduler Comparison
     print("Running scheduler comparison...")
     sched_map = {
-        'None':            {},
-        'StepLR':          {'scheduler_fn': lambda o: torch.optim.lr_scheduler.StepLR(o, step_size=10, gamma=0.1)},
-        'CosineAnnealing': {'scheduler_fn': lambda o: torch.optim.lr_scheduler.CosineAnnealingLR(o, T_max=N)},
-        'OneCycle':        {'scheduler_fn': lambda o: torch.optim.lr_scheduler.OneCycleLR(o, max_lr=LR, total_steps=N)}
+        'None': None,
+        'StepLR': lambda o: torch.optim.lr_scheduler.StepLR(o, step_size=10, gamma=0.1),
+        'CosineAnnealing': lambda o: torch.optim.lr_scheduler.CosineAnnealingLR(o, T_max=N),
+        'OneCycle': lambda o: torch.optim.lr_scheduler.OneCycleLR(o, max_lr=LR, total_steps=N)
     }
     runs = [
         run_experiment(
             name, ARCHITECTURE, EMNIST_TYPE, ds,
             k_folds=K, epochs=N, batch_size=B,
-            learning_rate=LR, optimizer_fn=best_opt_fn,
+            learning_rate=LR, optimizer_fn=best_opt_fn, scheduler_fn=scheduler,
             weight_decay=WD,
             early_stopping_patience=PAT,
             cpu_workers=CPU_WORKERS,
-            device=DEVICE,
-            **params
+            device=DEVICE
         )
-        for name, params in sched_map.items()
+        for name, scheduler in sched_map.items()
     ]
     save_test_data(runs, '../test_data/scheduler_comparison.csv')
     plot_scheduler_comparison(runs, 'Scheduler Comparison')
@@ -223,7 +246,7 @@ def main():
     best_sched_fn = sched_map[best_sched].get('scheduler_fn')
     print(f"Best scheduler: {best_sched}")
 
-    # 3) Regularization Comparison
+    # 4) Regularization Comparison
     print("Running regularization comparison...")
     reg_map = {
         'No WD': 0.0,
@@ -251,7 +274,7 @@ def main():
     best_wd  = reg_map[best_reg]
     print(f"Best weight decay: {best_reg}")
 
-    # 4) Batch Size Comparison
+    # 5) Batch Size Comparison
     print("Running batch size comparison...")
     batch_sizes = [64, 128, 256, 512, 1024]
     runs_bs = [
@@ -279,7 +302,7 @@ def main():
           f"Weight Decay: {best_reg}, "
           f"Batch Size: {best_bs}")
 
-    # 5) Architecture Comparison
+    # 6) Architecture Comparison
     print("Running final architecture comparison...")
     archs = [
         'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256', 'EmnistCNN_16_64',
