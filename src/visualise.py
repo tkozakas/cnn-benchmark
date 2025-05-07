@@ -36,7 +36,7 @@ def _plot_bar(labels, values, title, xlabel, ylabel, category, name, suffix):
     ax.grid(axis='y', linestyle='--', alpha=0.7)
     plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
     fig.tight_layout()
-    fig.subplots_adjust(bottom=0.25)
+    fig.subplots_adjust(bottom=0.35)
     _save_plot(fig, category, name, suffix)
 
 def plot_learning_rate_comparison(runs, title):
@@ -60,14 +60,6 @@ def plot_optimizer_comparison(runs, title, loss_threshold=0.3):
                'Epochos', 'Nuostolis', 'optimizer', name, 'val_loss')
     _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
                'Epochos', 'Tikslumas', 'optimizer', name, 'val_acc')
-    labels = [r['name'] for r in runs]
-    values = [
-        next((i for i,v in enumerate(r['val_loss_curve'],1) if v<=loss_threshold),
-             len(r['val_loss_curve']))
-        for r in runs
-    ]
-    _plot_bar(labels, values, f'Epochos iki nuostolio ≤ {loss_threshold}',
-              'Optimizatorius', 'Epochos', 'optimizer', name, 'speed')
 
 def plot_scheduler_comparison(runs, title):
     name = title.replace(' ', '_')
@@ -109,20 +101,12 @@ def plot_batch_size_comparison(runs, title, acc_target=0.9):
     _plot_bar(labels, [r['avg_gpu_usage'] for r in runs],
               'Vidutinis GPU naudojimas (%)', 'Batšo dydis', 'Procentai',
               'batch_size', name, 'gpu')
-    values = [
-        next((i for i,v in enumerate(r['val_accuracy_curve'],1) if v>=acc_target),
-             len(r['val_accuracy_curve']))
-        for r in runs
-    ]
-    _plot_bar(labels, values, f'Epochos iki tikslumo ≥ {int(acc_target*100)}%',
-              'Batšo dydis', 'Epochos', 'batch_size', name, 'perf_time')
 
 def plot_architecture_comparison(runs, title, acc_target=0.9):
     name = title.replace(' ', '_')
     labels = [r['name'] for r in runs]
-    _plot_bar(labels, [r['test_accuracy'] for r in runs],
-              'Galutinis testavimo tikslumas', 'Architektūra', 'Tikslumas',
-              'architecture', name, 'accuracy')
+    _plot_line(runs, 'f1_score_curve', 'F1 rodiklis per epochas',
+               'Epochos', 'F1 rodiklis', 'architecture', name, 'f1_score')
     fig, ax = plt.subplots(figsize=(8,6))
     params = [r['param_count'] for r in runs]
     accs = [r['test_accuracy'] for r in runs]
@@ -154,9 +138,9 @@ def plot_test_accuracy(runs, title):
 def plot_architecture_by_fold(folds_data, title):
     name = title.replace(' ', '_')
     folds = list(range(1, len(folds_data)+1))
-    _plot_bar(folds, [f['test_f1_score'] for f in folds_data],
-              'F1 pagal foldus', 'Foldas', 'F1 rodiklis',
-              'architecture', name, 'by_fold')
+    _plot_bar(folds, [f['f1_score_curve'] for f in folds_data],
+              'F1 rodiklis per epochas', 'Foldai', 'F1 rodiklis',
+              'architecture', name, 'f1_score')
     for key, t, y in [
         ('train_accuracy', 'Mokymo tikslumas per epochas', 'Tikslumas'),
         ('val_accuracy',   'Validavimo tikslumas per epochas', 'Tikslumas'),
@@ -172,6 +156,9 @@ def plot_architecture_by_fold(folds_data, title):
         ax.grid(True)
         ax.legend(fontsize='small')
         _save_plot(fig, 'architecture', name, key)
+    # Last fold confusion matrix
+    plot_confusion_matrix(folds_data[-1]['model'], folds_data[-1]['test_loader'],
+                          folds_data[-1]['device'], folds_data[-1]['classes'])
 
 def plot_confusion_matrix(model, loader, device, classes):
     name = "confusion_matrix"
