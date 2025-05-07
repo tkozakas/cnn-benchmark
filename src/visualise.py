@@ -57,7 +57,7 @@ def plot_learning_rate_comparison(runs, title):
     _save_plot(fig3, "learning_rate", name, "train_acc")
 
 
-def plot_optimizer_comparison(runs, title, loss_threshold=0.3):
+def plot_optimizer_comparison(runs, title):
     name = title.replace(' ', '_')
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
                'Epochos', 'Nuostolis', 'optimizer', name, 'train_loss')
@@ -97,7 +97,7 @@ def plot_regularization_comparison(runs, title):
               'Regularizacija', 'Spraga', 'regularization', name, 'gap')
 
 
-def plot_batch_size_comparison(runs, title, acc_target=0.9):
+def plot_batch_size_comparison(runs, title):
     name = title.replace(' ', '_')
     labels = [str(r['batch_size']) for r in runs]
     _plot_bar(labels, [r['training_time'] for r in runs],
