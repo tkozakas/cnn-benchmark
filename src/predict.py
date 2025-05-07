@@ -26,13 +26,13 @@ from matplotlib import pyplot as plt
 from torchvision import transforms, datasets
 
 from model import get_model
-from utility import get_transforms
+from utility import get_transforms, get_emnist_class_num
 
 transform = get_transforms()
 
 
-def load_trained_model(arch, model_path, device):
-    model = get_model(arch).to(device)
+def load_trained_model(arch, emnist_type, model_path, device):
+    model = get_model(arch, num_classes=get_emnist_class_num(emnist_type)).to(device)
     ckpt = torch.load(model_path, map_location=device)
     model.load_state_dict(ckpt)
     model.eval()
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     preview_emnist(EMNIST_TYPE, n=10)
 
     # 2) Process a random batch from EMNIST and show PyTorch predictions
-    model = load_trained_model(ARCHITECTURE, MODEL_PATH, device)
+    model = load_trained_model(ARCHITECTURE, EMNIST_TYPE, MODEL_PATH, device)
     ds = datasets.EMNIST(
         root="../data",
         split=EMNIST_TYPE,

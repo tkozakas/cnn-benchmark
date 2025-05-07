@@ -19,6 +19,15 @@ def get_subsample(full_dataset, subsample_size):
         )
     return full_dataset
 
+def get_emnist_class_num(emnist_type):
+    if emnist_type == 'letters':
+        return 26
+    elif emnist_type == 'digits':
+        return 10
+    elif emnist_type == 'balanced':
+        return 47
+    else:
+        raise ValueError(f"Unknown EMNIST type: {emnist_type}")
 
 def parse_args(args):
     """Parse command line arguments"""

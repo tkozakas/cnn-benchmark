@@ -44,7 +44,7 @@ from torchvision import datasets
 
 from config import train_config, model_config
 from model import get_model, save_model, load_model
-from utility import get_transforms
+from utility import get_transforms, get_emnist_class_num
 from utility import parse_args, get_subsample
 from visualise import (
     plot_confusion_matrix
@@ -335,7 +335,7 @@ def main():
         device=DEVICE,
         architecture=ARCHITECTURE,
         dataset=ds,
-        model_fn=lambda: get_model(ARCHITECTURE),
+        model_fn=lambda: get_model(ARCHITECTURE, num_classes=get_emnist_class_num(EMNIST_TYPE)),
         k_folds=K,
         epochs=N,
         batch_size=B,
@@ -356,7 +356,7 @@ def main():
         pin_memory=torch.cuda.is_available(),
         persistent_workers=True
     )
-    model = get_model(ARCHITECTURE).to(DEVICE)
+    model = get_model(ARCHITECTURE, num_classes=get_emnist_class_num(EMNIST_TYPE)).to(DEVICE)
     model = load_model(
         model, f"{ARCHITECTURE}_fold{K}.pth"
     )

@@ -1,6 +1,6 @@
 import os
+
 import matplotlib.pyplot as plt
-import numpy as np
 import seaborn as sns
 import torch
 from sklearn.metrics import confusion_matrix
@@ -35,9 +35,11 @@ def _plot_bar(labels, values, title, xlabel, ylabel, category, name, suffix):
     ax.set_ylabel(ylabel)
     ax.grid(axis='y', linestyle='--', alpha=0.7)
     plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.25)
     _save_plot(fig, category, name, suffix)
 
-def plot_optimizer_comparison(runs, title, loss_threshold=0.5):
+def plot_optimizer_comparison(runs, title, loss_threshold=0.3):
     name = title.replace(' ', '_')
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
                'Epochos', 'Nuostolis', 'optimizer', name, 'train_loss')

@@ -70,14 +70,15 @@ class EmnistCNN(nn.Module):
         x = self.fcon2(x)
         return x
 
-def get_model(architecture):
+
+def get_model(architecture, num_classes=47):
     if architecture == 'GoogleNet':
         from torchvision.models import googlenet
-        model = googlenet(num_classes=model_config[architecture]['num_classes'], aux_logits=False)
+        model = googlenet(num_classes=num_classes, aux_logits=False)
         return model
     elif architecture == 'ResNet18':
         from torchvision.models import resnet18
-        model = resnet18(num_classes=model_config[architecture]['num_classes'])
+        model = resnet18(num_classes=num_classes)
         return model
     return EmnistCNN(**model_config[architecture])
 

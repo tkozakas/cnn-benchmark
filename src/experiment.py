@@ -36,21 +36,22 @@ from docopt import docopt
 from torchvision import datasets
 
 from model import get_model
+from src.utility import get_emnist_class_num
 from train import train, transform
 from utility import parse_args, get_subsample
-from visualise import plot_test_accuracy, plot_architecture_comparison, plot_optimizer_comparison, plot_scheduler_comparison, \
+from visualise import plot_architecture_comparison, plot_optimizer_comparison, plot_scheduler_comparison, \
     plot_regularization_comparison, plot_batch_size_comparison, plot_architecture_by_fold
 
 os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
 
-def run_experiment(name, architecture, dataset, **kwargs):
+def run_experiment(name, architecture, emnist_type, dataset, **kwargs):
     """Run one experimental configuration and collect metrics."""
     folds_data = train(
         architecture=architecture,
         dataset=dataset,
-        model_fn=lambda arch=architecture: get_model(arch),
+        model_fn=lambda arch=architecture: get_model(arch, num_classes=get_emnist_class_num(emnist_type)),
         **kwargs
     )
 
@@ -179,7 +180,7 @@ def main():
     }
     runs = [
         run_experiment(
-            name, ARCHITECTURE, ds,
+            name, ARCHITECTURE, EMNIST_TYPE, ds,
             k_folds=K, epochs=N, batch_size=B,
             learning_rate=LR, optimizer_fn=opt_fn,
             weight_decay=WD,
@@ -205,7 +206,7 @@ def main():
     }
     runs = [
         run_experiment(
-            name, ARCHITECTURE, ds,
+            name, ARCHITECTURE, EMNIST_TYPE, ds,
             k_folds=K, epochs=N, batch_size=B,
             learning_rate=LR, optimizer_fn=best_opt_fn,
             weight_decay=WD,
@@ -233,7 +234,7 @@ def main():
     }
     runs = [
         run_experiment(
-            name, ARCHITECTURE, ds,
+            name, ARCHITECTURE, EMNIST_TYPE, ds,
             k_folds=K, epochs=N, batch_size=B,
             learning_rate=LR, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
@@ -255,7 +256,7 @@ def main():
     batch_sizes = [64, 128, 256, 512, 1024]
     runs_bs = [
         run_experiment(
-            f"BS={b}", ARCHITECTURE, ds,
+            f"BS={b}", ARCHITECTURE, EMNIST_TYPE, ds,
             k_folds=K, epochs=N, batch_size=b,
             learning_rate=LR, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
@@ -282,13 +283,12 @@ def main():
     print("Running final architecture comparison...")
     best_lr = 0.0001
     archs = [
-        'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256',
-        'EmnistCNN_8_32_64',  'EmnistCNN_16_64',
-        'EmnistCNN_32_128',   'GoogleNet', 'ResNet18'
+        'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256', 'EmnistCNN_16_64',
+        'EmnistCNN_32_128', 'GoogleNet', 'ResNet18'
     ]
     runs = [
         run_experiment(
-            arch, arch, ds,
+            arch, arch, EMNIST_TYPE, ds,
             k_folds=K, epochs=N, batch_size=best_bs,
             learning_rate=best_lr, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
