@@ -70,6 +70,10 @@ class EmnistCNN(nn.Module):
         x = self.fcon2(x)
         return x
 
+def _resolve_activation(act):
+    if isinstance(act, str):
+        return getattr(nn, act)
+    return act
 
 def get_model(architecture, num_classes, activation=nn.ReLU):
     if architecture == 'GoogleNet':
@@ -87,7 +91,7 @@ def get_model(architecture, num_classes, activation=nn.ReLU):
         fmaps3=model_config[architecture].get('fmaps3'),
         dense=model_config[architecture]['dense'],
         dropout=model_config[architecture]['dropout'],
-        activation=activation if activation else model_config[architecture]['activation'],
+        activation=_resolve_activation(activation or model_config[architecture]['activation']),
     )
 
 def save_model(model, path):
