@@ -36,7 +36,7 @@ from docopt import docopt
 from torchvision import datasets
 
 from model import get_model
-from src.utility import get_emnist_class_num
+from utility import get_emnist_class_num
 from train import train, transform
 from utility import parse_args, get_subsample
 from visualise import plot_architecture_comparison, plot_optimizer_comparison, plot_scheduler_comparison, \
