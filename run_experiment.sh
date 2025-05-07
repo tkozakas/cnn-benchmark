@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH --time=02:00:00
+#SBATCH --time=24:00:00
 #SBATCH --job-name=ocr_benchmark
 #SBATCH --output=logs/ocr_benchmark_%j.out
 
