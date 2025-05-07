@@ -156,7 +156,6 @@ def plot_architecture_by_fold(folds_data, title):
         ax.grid(True)
         ax.legend(fontsize='small')
         _save_plot(fig, 'architecture', name, key)
-    # Last fold confusion matrix
     plot_confusion_matrix(folds_data[-1]['model'], folds_data[-1]['test_loader'],
                           folds_data[-1]['device'], folds_data[-1]['classes'])
 
