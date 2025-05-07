@@ -281,7 +281,6 @@ def main():
 
     # 5) Architecture Comparison
     print("Running final architecture comparison...")
-    best_lr = 0.0001
     archs = [
         'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256', 'EmnistCNN_16_64',
         'EmnistCNN_32_128', 'GoogleNet', 'ResNet18'
@@ -290,7 +289,7 @@ def main():
         run_experiment(
             arch, arch, EMNIST_TYPE, ds,
             k_folds=K, epochs=N, batch_size=best_bs,
-            learning_rate=best_lr, optimizer_fn=best_opt_fn,
+            learning_rate=LR, optimizer_fn=best_opt_fn,
             scheduler_fn=best_sched_fn,
             weight_decay=best_wd,
             early_stopping_patience=PAT,
