@@ -71,7 +71,7 @@ class EmnistCNN(nn.Module):
         return x
 
 
-def get_model(architecture, num_classes=47):
+def get_model(architecture, num_classes):
     if architecture == 'GoogleNet':
         from torchvision.models import googlenet
         model = googlenet(num_classes=num_classes, aux_logits=False)
