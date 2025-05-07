@@ -7,8 +7,8 @@ from config import model_config
 
 
 class EmnistCNN(nn.Module):
-    def __init__(self,  num_classes, fmaps1, fmaps2, dense, dropout,
-                 input_size=28, fmaps3=None, activation=nn.ReLU):
+    def __init__(self,  num_classes, fmaps1, fmaps2, dense, dropout, activation,
+                 input_size=28, fmaps3=None):
         super(EmnistCNN, self).__init__()
 
         # First Convolutional Block
@@ -71,7 +71,7 @@ class EmnistCNN(nn.Module):
         return x
 
 
-def get_model(architecture, num_classes):
+def get_model(architecture, num_classes, activation=nn.ReLU):
     if architecture == 'GoogleNet':
         from torchvision.models import googlenet
         model = googlenet(num_classes=num_classes, aux_logits=False)
@@ -86,7 +86,8 @@ def get_model(architecture, num_classes):
         fmaps2=model_config[architecture]['fmaps2'],
         fmaps3=model_config[architecture].get('fmaps3'),
         dense=model_config[architecture]['dense'],
-        dropout=model_config[architecture]['dropout']
+        dropout=model_config[architecture]['dropout'],
+        activation=activation if activation else model_config[architecture]['activation'],
     )
 
 def save_model(model, path):

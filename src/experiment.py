@@ -46,12 +46,13 @@ os.makedirs('../test_data', exist_ok=True)
 warnings.filterwarnings("ignore", message=".*GoogleNet.*", category=UserWarning)
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="docopt")
 
-def run_experiment(name, architecture, emnist_type, dataset, **kwargs):
+
+def run_experiment(name, architecture, emnist_type, dataset, activation_fn=None, **kwargs):
     """Run one experimental configuration and collect metrics."""
     folds_data = train(
         architecture=architecture,
         dataset=dataset,
-        model_fn=lambda arch=architecture: get_model(arch, num_classes=get_emnist_class_num(emnist_type)),
+        model_fn=lambda arch=architecture: get_model(arch, num_classes=get_emnist_class_num(emnist_type), activation=activation_fn),
         **kwargs
     )
 
@@ -302,7 +303,31 @@ def main():
           f"Weight Decay: {best_reg}, "
           f"Batch Size: {best_bs}")
 
-    # 6) Architecture Comparison
+    # 6) Activation Function Comparison
+    print("Running activation function comparison...")
+    act_map = {
+        'ReLU': torch.nn.ReLU,
+        'Leaky ReLU': torch.nn.LeakyReLU,
+        'ELU': torch.nn.ELU,
+        'SELU': torch.nn.SELU,
+        'GELU': torch.nn.GELU,
+    }
+    runs = [
+        run_experiment(
+            name, ARCHITECTURE, EMNIST_TYPE, ds,
+            k_folds=K, epochs=N, batch_size=B,
+            learning_rate=LR, optimizer_fn=best_opt_fn, activation_fn=act_fn,
+            scheduler_fn=best_sched_fn,
+            weight_decay=best_wd,
+            early_stopping_patience=PAT,
+            cpu_workers=CPU_WORKERS,
+            device=DEVICE
+        )
+        for name, act_fn in act_map.items()
+    ]
+    plot_activation_function_comparison(runs, 'Activation Function Comparison')
+
+    # 7) Architecture Comparison
     print("Running final architecture comparison...")
     archs = [
         'EmnistCNN_16_64_128', 'EmnistCNN_32_128_256', 'EmnistCNN_16_64',
@@ -332,7 +357,7 @@ def main():
     )[0]
     best_arch = best_run['name']
 
-    # 7) Plot of the best architecture by fold F1 score
+    # 8) Plot of the best architecture by fold F1 score
     plot_architecture_by_fold(
         best_run['folds_data'],
         f"Best Architecture: {best_arch} — Fold F1 Score Comparison"

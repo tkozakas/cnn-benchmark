@@ -170,6 +170,25 @@ def plot_architecture_by_fold(folds_data, title):
     for key, t, x, y, suffix in metrics:
         _plot_folds(folds_data, key, t, x, y, 'architecture', name, suffix)
 
+
+def plot_activation_function_comparison(runs, title):
+    name = title.replace(' ', '_')
+    labels = [r['name'] for r in runs]
+    f1s = [r['test_f1_score'] for r in runs]
+    _plot_bar(labels,
+              f1s,
+              title='Galutinis F1 rodiklis',
+              xlabel='Aktyvacijos funkcija',
+              ylabel='F1 rodiklis',
+              category='activation',
+              name=name,
+              suffix='f1_score')
+    _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
+               'Epochos', 'Nuostolis', 'activation', name, 'train_loss')
+    _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
+               'Epochos', 'Nuostolis', 'activation', name, 'val_loss')
+
+
 def plot_confusion_matrix(model, loader, device, classes):
     name = "confusion_matrix"
     fig, ax = plt.subplots(figsize=(8, 8))
