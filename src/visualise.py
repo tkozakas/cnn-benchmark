@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
-from matplotlib.ticker import FuncFormatter
+from matplotlib.ticker import FuncFormatter, MaxNLocator
 from sklearn.metrics import confusion_matrix
 
 BASE_DIR = "../test_data/plot"
@@ -58,9 +58,10 @@ def _plot_line(runs, key, title, xlabel, ylabel, category, suffix):
     ax.set_ylabel(ylabel)
     ax.grid(True)
     ax.legend(fontsize='small')
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     if ylabel.lower().startswith("tikslumas"):
         ax.yaxis.set_major_formatter(
-            FuncFormatter(lambda x, _: f"{int(x*100)}\\%")
+            FuncFormatter(lambda x, _: f"{int(x*100)}%")
         )
     _save_plot(fig, category, suffix)
     series = {r['name']: r[key] for r in runs}
