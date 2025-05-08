@@ -15,15 +15,15 @@ def _ensure_dir(path):
     os.makedirs(path, exist_ok=True)
 
 
-def _save_plot(fig, category, name, suffix):
-    png_path = os.path.join(BASE_DIR, category, f"{name}_{suffix}.png")
+def _save_plot(fig, category, suffix):
+    png_path = os.path.join(BASE_DIR, category, f"{suffix}.png")
     _ensure_dir(os.path.dirname(png_path))
     fig.savefig(png_path)
     plt.close(fig)
 
 
-def _save_csv_line(series_dict, category, name, suffix):
-    csv_path = os.path.join(CSV_DIR, category, f"{name}_{suffix}.csv")
+def _save_csv_line(series_dict, category, suffix):
+    csv_path = os.path.join(CSV_DIR, category, f"{suffix}.csv")
     _ensure_dir(os.path.dirname(csv_path))
     max_len = max(len(v) for v in series_dict.values())
     with open(csv_path, "w", newline="") as f:
@@ -39,17 +39,17 @@ def _save_csv_line(series_dict, category, name, suffix):
             writer.writerow(row)
 
 
-def _save_csv_bar(labels, values, category, name, suffix):
-    csv_path = os.path.join(CSV_DIR, category, f"{name}_{suffix}.csv")
+def _save_csv_bar(labels, values, category, suffix):
+    csv_path = os.path.join(CSV_DIR, category, f"{suffix}.csv")
     _ensure_dir(os.path.dirname(csv_path))
     with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["label", "value"]);
+        writer.writerow(["label", "value"])
         for l, v in zip(labels, values):
             writer.writerow([l, v])
 
 
-def _plot_line(runs, key, title, xlabel, ylabel, category, name, suffix):
+def _plot_line(runs, key, title, xlabel, ylabel, category, suffix):
     fig, ax = plt.subplots(figsize=(8, 6))
     for r in runs:
         ax.plot(range(1, len(r[key]) + 1), r[key], label=r['name'])
@@ -62,12 +62,12 @@ def _plot_line(runs, key, title, xlabel, ylabel, category, name, suffix):
         ax.yaxis.set_major_formatter(
             FuncFormatter(lambda x, _: f"{int(x*100)}\\%")
         )
-    _save_plot(fig, category, name, suffix)
+    _save_plot(fig, category, suffix)
     series = {r['name']: r[key] for r in runs}
-    _save_csv_line(series, category, name, suffix)
+    _save_csv_line(series, category, suffix)
 
 
-def _plot_bar(labels, values, title, xlabel, ylabel, category, name, suffix):
+def _plot_bar(labels, values, title, xlabel, ylabel, category, suffix):
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.bar(labels, values)
     ax.set_title(title)
@@ -78,13 +78,13 @@ def _plot_bar(labels, values, title, xlabel, ylabel, category, name, suffix):
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.35)
 
-    _save_plot(fig, category, name, suffix)
-    _save_csv_bar(labels, values, category, name, suffix)
+    _save_plot(fig, category, suffix)
+    _save_csv_bar(labels, values, category, suffix)
 
 
 def _plot_scatter(labels, xs, ys,
                   title, xlabel, ylabel,
-                  category, name, suffix):
+                  category, suffix):
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.scatter(xs, ys)
     for l, x, y in zip(labels, xs, ys):
@@ -93,54 +93,51 @@ def _plot_scatter(labels, xs, ys,
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.grid(True)
-    _save_plot(fig, category, name, suffix)
+    _save_plot(fig, category, suffix)
 
-    csv_path = os.path.join(CSV_DIR, category, f"{name}_{suffix}.csv")
+    csv_path = os.path.join(CSV_DIR, category, f"{suffix}.csv")
     _ensure_dir(os.path.dirname(csv_path))
     with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["label", "x", "y"]);
+        writer.writerow(["label", "x", "y"])
         for l, x, y in zip(labels, xs, ys):
             writer.writerow([l, x, y])
 
 
-def plot_learning_rate_comparison(runs, title):
+def plot_learning_rate_comparison(runs):
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'learning_rate', title, 'train_loss')
+               'Epochos', 'Nuostolis', 'learning_rate', 'train_loss')
     _plot_line(runs, 'train_accuracy_curve', 'Mokymo tikslumas per epochas',
-               'Epochos', 'Tikslumas', 'learning_rate', title, 'train_acc')
+               'Epochos', 'Tikslumas', 'learning_rate', 'train_acc')
 
 
-def plot_optimizer_comparison(runs, title):
-    name = title.replace(' ', '_')
+def plot_optimizer_comparison(runs):
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'optimizer', name, 'train_loss')
+               'Epochos', 'Nuostolis', 'optimizer', 'train_loss')
     _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'optimizer', name, 'val_loss')
+               'Epochos', 'Nuostolis', 'optimizer', 'val_loss')
     _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
-               'Epochos', 'Tikslumas', 'optimizer', name, 'val_acc')
+               'Epochos', 'Tikslumas', 'optimizer', 'val_acc')
 
 
-def plot_scheduler_comparison(runs, title):
-    name = title.replace(' ', '_')
+def plot_scheduler_comparison(runs):
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'scheduler', name, 'train_loss')
+               'Epochos', 'Nuostolis', 'scheduler', 'train_loss')
     _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'scheduler', name, 'val_loss')
+               'Epochos', 'Nuostolis', 'scheduler', 'val_loss')
     _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
-               'Epochos', 'Tikslumas', 'scheduler', name, 'val_acc')
+               'Epochos', 'Tikslumas', 'scheduler', 'val_acc')
     _plot_line(runs, 'lr_curve', 'Mokymosi greitis per epochas',
-               'Epochos', 'Greičio koeficientas', 'scheduler', name, 'lr')
+               'Epochos', 'Greičio koeficientas', 'scheduler', 'lr')
 
 
-def plot_regularization_comparison(runs, title):
-    name = title.replace(' ', '_')
+def plot_regularization_comparison(runs):
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'regularization', name, 'train_loss')
+               'Epochos', 'Nuostolis', 'regularization', 'train_loss')
     _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'regularization', name, 'val_loss')
+               'Epochos', 'Nuostolis', 'regularization', 'val_loss')
     _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
-               'Epochos', 'Tikslumas', 'regularization', name, 'val_acc')
+               'Epochos', 'Tikslumas', 'regularization', 'val_acc')
     labels = [r['name'] for r in runs]
     values = [
         sum(r['train_accuracy_curve'][i] - r['val_accuracy_curve'][i]
@@ -148,30 +145,27 @@ def plot_regularization_comparison(runs, title):
         for r in runs
     ]
     _plot_bar(labels, values, 'Bendroji spraga mokymas–validavimas',
-              'Regularizacija', 'Spraga', 'regularization', name, 'gap')
+              'Regularizacija', 'Spraga', 'regularization', 'gap')
 
 
-def plot_batch_size_comparison(runs, title):
-    name = title.replace(' ', '_')
+def plot_batch_size_comparison(runs):
     labels = [str(r['batch_size']) for r in runs]
     _plot_bar(labels, [r['training_time'] for r in runs],
               'Visas mokymo laikas (s)', 'Batšo dydis', 'Sekundės',
-              'batch_size', name, 'time')
+              'batch_size', 'time')
     _plot_bar(labels, [r['avg_samples_per_sec'] for r in runs],
               'Pralaidumas (pavyzdžių/s)', 'Batšo dydis', 'Pavyzdžiai/s',
-              'batch_size', name, 'throughput')
+              'batch_size', 'throughput')
     _plot_bar(labels, [r['avg_gpu_usage'] for r in runs],
               'Vidutinis GPU naudojimas (%)', 'Batšo dydis', 'Procentai',
-              'batch_size', name, 'gpu')
+              'batch_size', 'gpu')
 
 
-
-def plot_architecture_comparison(runs, title, acc_target=0.85):
-    name = title.replace(' ', '_')
+def plot_architecture_comparison(runs, acc_target=0.85):
     labels = [r['name'] for r in runs]
 
     _plot_line(runs, 'f1_score_curve', 'F1 rodiklis per epochas',
-               'Epochos', 'F1 rodiklis', 'architecture', name, 'f1_score')
+               'Epochos', 'F1 rodiklis', 'architecture', 'f1_score')
 
     params = [r['param_count'] for r in runs]
     accs = [r['test_accuracy'] for r in runs]
@@ -179,12 +173,12 @@ def plot_architecture_comparison(runs, title, acc_target=0.85):
         labels, params, accs,
         'Parametrų skaičius vs tikslumas',
         'Parametrų skaičius', 'Tikslumas',
-        'architecture', name, 'params'
+        'architecture', 'params'
     )
 
     _plot_bar(labels, [r['inference_latency'] for r in runs],
               'Inferencijos vėlinimas (ms)', 'Architektūra', 'Milisekundės',
-              'architecture', name, 'latency')
+              'architecture', 'latency')
 
     values = [
         sum(r['epoch_time_curve'][: next((i for i, v in enumerate(r['val_accuracy_curve'], 1)
@@ -193,17 +187,16 @@ def plot_architecture_comparison(runs, title, acc_target=0.85):
         for r in runs
     ]
     _plot_bar(labels, values, f'Laikas iki tikslumo ≥ {int(acc_target * 100)}%',
-              'Architektūra', 'Sekundės', 'architecture', name, 'time_to_acc')
+              'Architektūra', 'Sekundės', 'architecture', 'time_to_acc')
 
 
-def plot_test_accuracy(runs, title):
-    name = title.replace(' ', '_')
+def plot_test_accuracy(runs):
     _plot_bar([r['name'] for r in runs], [r['test_accuracy'] for r in runs],
               'Testavimo tikslumas', 'Konfigūracija', 'Tikslumas',
-              'test_accuracy', name, 'accuracy')
+              'test_accuracy', 'accuracy')
 
 
-def _plot_folds(folds_data, metric_key, title, xlabel, ylabel, category, name, suffix):
+def _plot_folds(folds_data, metric_key, title, xlabel, ylabel, category, suffix):
     fig, ax = plt.subplots(figsize=(10, 6))
     epochs = range(1, len(folds_data[0][metric_key]) + 1)
     for idx, f in enumerate(folds_data, 1):
@@ -213,11 +206,10 @@ def _plot_folds(folds_data, metric_key, title, xlabel, ylabel, category, name, s
     ax.set_ylabel(ylabel)
     ax.grid(True)
     ax.legend(title='Foldas', fontsize='small')
-    _save_plot(fig, category, name, suffix)
+    _save_plot(fig, category, suffix)
 
 
-def plot_architecture_by_fold(folds_data, title):
-    name = title.replace(' ', '_')
+def plot_architecture_by_fold(folds_data):
     metrics = [
         ('train_accuracy', 'Mokymo tikslumas per epochą', 'Epochos', 'Tikslumas', 'train_accuracy'),
         ('val_accuracy', 'Validavimo tikslumas per epochą', 'Epochos', 'Tikslumas', 'val_accuracy'),
@@ -225,11 +217,10 @@ def plot_architecture_by_fold(folds_data, title):
     ]
 
     for key, t, x, y, suffix in metrics:
-        _plot_folds(folds_data, key, t, x, y, 'architecture', name, suffix)
+        _plot_folds(folds_data, key, t, x, y, 'architecture', suffix)
 
 
-def plot_activation_function_comparison(runs, title):
-    name = title.replace(' ', '_')
+def plot_activation_function_comparison(runs):
     labels = [r['name'] for r in runs]
     f1s = [r['test_f1_score'] for r in runs]
     _plot_bar(labels,
@@ -238,16 +229,14 @@ def plot_activation_function_comparison(runs, title):
               xlabel='Aktyvacijos funkcija',
               ylabel='F1 rodiklis',
               category='activation',
-              name=name,
               suffix='f1_score')
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'activation', name, 'train_loss')
+               'Epochos', 'Nuostolis', 'activation', 'train_loss')
     _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'activation', name, 'val_loss')
+               'Epochos', 'Nuostolis', 'activation', 'val_loss')
 
 
 def plot_confusion_matrix(model, loader, device, classes):
-    name = "confusion_matrix"
     fig, ax = plt.subplots(figsize=(8, 8))
     preds, labels = [], []
     model.eval()
@@ -264,4 +253,4 @@ def plot_confusion_matrix(model, loader, device, classes):
     ax.set_xlabel('Prognozuojama klasė')
     ax.set_ylabel('Tikroji klasė')
     ax.set_title('Sumaišties matrica')
-    _save_plot(fig, "confusion", name, "cm")
+    _save_plot(fig, "confusion", "cm")
