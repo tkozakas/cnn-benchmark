@@ -229,7 +229,7 @@ def plot_activation_function_comparison(runs, name):
               xlabel='Aktyvacijos funkcija',
               ylabel='F1 rodiklis',
               category='activation',
-              suffix='f1_score')
+              suffix=name + '_f1_score')
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
                'Epochos', 'Nuostolis', 'activation', name + '_train_loss')
     _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
