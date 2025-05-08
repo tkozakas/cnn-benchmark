@@ -301,7 +301,7 @@ def main():
     print("Running activation function comparison...")
     act_map = {
         'ReLU': torch.nn.ReLU,
-        'Leaky ReLU': torch.nn.LeakyReLU,
+        'LeakyReLU': torch.nn.LeakyReLU,
         'ELU': torch.nn.ELU,
         'SELU': torch.nn.SELU,
         'GELU': torch.nn.GELU,
