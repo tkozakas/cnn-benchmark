@@ -122,7 +122,7 @@ def get_data_loaders(dataset, train_idx, test_idx,
     loader_args = dict(
         batch_size=batch_size,
         pin_memory=torch.cuda.is_available(),
-        persistent_workers=True,
+        persistent_workers=False,
         num_workers=num_workers,
         prefetch_factor=2
     )
@@ -364,7 +364,7 @@ def main():
         num_workers=CPU_WORKERS,
         shuffle=False,
         pin_memory=torch.cuda.is_available(),
-        persistent_workers=True
+        persistent_workers=False
     )
     model = get_model(ARCHITECTURE, num_classes=get_emnist_class_num(EMNIST_TYPE)).to(DEVICE)
     model = load_model(
