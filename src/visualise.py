@@ -164,13 +164,13 @@ def plot_regularization_comparison(runs, name):
 def plot_batch_size_comparison(runs, name):
     labels = [str(r['batch_size']) for r in runs]
     _plot_bar(labels, [r['training_time'] for r in runs],
-              'Visas mokymo laikas (s)', 'Batch dydis', 'Sekundės',
+              'Visas mokymo laikas (s)', 'Partijos dydis', 'Sekundės',
               'batch_size', name + '_time')
     _plot_bar(labels, [r['avg_samples_per_sec'] for r in runs],
-              'Pralaidumas (pavyzdžių/s)', 'Batch dydis', 'Pavyzdžiai/s',
+              'Pralaidumas (pavyzdžių/s)', 'Partijos dydis', 'Pavyzdžiai/s',
               'batch_size', name + '_throughput')
     _plot_bar(labels, [r['avg_gpu_usage'] for r in runs],
-              'Vidutinis GPU naudojimas (%)', 'Batch dydis', 'Procentai',
+              'Vidutinis GPU naudojimas (%)', 'Partijos dydis', 'Procentai',
               'batch_size', name + '_gpu')
 
 
