@@ -1,3 +1,4 @@
+import csv
 import os
 
 import matplotlib.pyplot as plt
@@ -7,23 +8,51 @@ from matplotlib.ticker import FuncFormatter
 from sklearn.metrics import confusion_matrix
 
 BASE_DIR = "../test_data/plot"
+CSV_DIR = "../test_data/plot_csv"
+
+
+def _ensure_dir(path):
+    os.makedirs(path, exist_ok=True)
 
 
 def _save_plot(fig, category, name, suffix):
-    path = os.path.join(BASE_DIR, category)
-    os.makedirs(path, exist_ok=True)
-    fig.savefig(os.path.join(path, f"{name}_{suffix}.png"))
+    png_path = os.path.join(BASE_DIR, category, f"{name}_{suffix}.png")
+    _ensure_dir(os.path.dirname(png_path))
+    fig.savefig(png_path)
     plt.close(fig)
 
 
-def _epochs(r):
-    return range(1, len(r['train_loss_curve']) + 1)
+def _save_csv_line(series_dict, category, name, suffix):
+    csv_path = os.path.join(CSV_DIR, category, f"{name}_{suffix}.csv")
+    _ensure_dir(os.path.dirname(csv_path))
+    max_len = max(len(v) for v in series_dict.values())
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        header = ["epoch"] + list(series_dict.keys())
+        writer.writerow(header)
+        for i in range(1, max_len + 1):
+            row = [i]
+            for k in series_dict:
+                arr = series_dict[k]
+                val = arr[i - 1] if i <= len(arr) else arr[-1]
+                row.append(val)
+            writer.writerow(row)
+
+
+def _save_csv_bar(labels, values, category, name, suffix):
+    csv_path = os.path.join(CSV_DIR, category, f"{name}_{suffix}.csv")
+    _ensure_dir(os.path.dirname(csv_path))
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["label", "value"]);
+        for l, v in zip(labels, values):
+            writer.writerow([l, v])
 
 
 def _plot_line(runs, key, title, xlabel, ylabel, category, name, suffix):
     fig, ax = plt.subplots(figsize=(8, 6))
     for r in runs:
-        ax.plot(_epochs(r), r[key], label=r['name'])
+        ax.plot(range(1, len(r[key]) + 1), r[key], label=r['name'])
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -34,6 +63,8 @@ def _plot_line(runs, key, title, xlabel, ylabel, category, name, suffix):
             FuncFormatter(lambda x, _: f"{int(x*100)}\\%")
         )
     _save_plot(fig, category, name, suffix)
+    series = {r['name']: r[key] for r in runs}
+    _save_csv_line(series, category, name, suffix)
 
 
 def _plot_bar(labels, values, title, xlabel, ylabel, category, name, suffix):
@@ -46,20 +77,38 @@ def _plot_bar(labels, values, title, xlabel, ylabel, category, name, suffix):
     plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
     fig.tight_layout()
     fig.subplots_adjust(bottom=0.35)
+
     _save_plot(fig, category, name, suffix)
+    _save_csv_bar(labels, values, category, name, suffix)
+
+
+def _plot_scatter(labels, xs, ys,
+                  title, xlabel, ylabel,
+                  category, name, suffix):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.scatter(xs, ys)
+    for l, x, y in zip(labels, xs, ys):
+        ax.text(x, y, l, fontsize=8, ha='right')
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid(True)
+    _save_plot(fig, category, name, suffix)
+
+    csv_path = os.path.join(CSV_DIR, category, f"{name}_{suffix}.csv")
+    _ensure_dir(os.path.dirname(csv_path))
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["label", "x", "y"]);
+        for l, x, y in zip(labels, xs, ys):
+            writer.writerow([l, x, y])
 
 
 def plot_learning_rate_comparison(runs, title):
-    name = title.replace(' ', '_')
-    fig3, ax3 = plt.subplots(figsize=(8, 6))
-    for r in runs:
-        ax3.plot(_epochs(r), r['train_accuracy_curve'], label=r['name'])
-    ax3.set_title('Mokymo tikslumas per epochas')
-    ax3.set_xlabel('Epochos')
-    ax3.set_ylabel('Tikslumas')
-    ax3.grid(True)
-    ax3.legend(fontsize='small')
-    _save_plot(fig3, "learning_rate", name, "train_acc")
+    _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
+               'Epochos', 'Nuostolis', 'learning_rate', title, 'train_loss')
+    _plot_line(runs, 'train_accuracy_curve', 'Mokymo tikslumas per epochas',
+               'Epochos', 'Tikslumas', 'learning_rate', title, 'train_acc')
 
 
 def plot_optimizer_comparison(runs, title):
@@ -116,27 +165,30 @@ def plot_batch_size_comparison(runs, title):
               'batch_size', name, 'gpu')
 
 
+
 def plot_architecture_comparison(runs, title, acc_target=0.85):
     name = title.replace(' ', '_')
     labels = [r['name'] for r in runs]
+
     _plot_line(runs, 'f1_score_curve', 'F1 rodiklis per epochas',
                'Epochos', 'F1 rodiklis', 'architecture', name, 'f1_score')
-    fig, ax = plt.subplots(figsize=(8, 6))
+
     params = [r['param_count'] for r in runs]
     accs = [r['test_accuracy'] for r in runs]
-    ax.scatter(params, accs)
-    for n, x, y in zip(labels, params, accs):
-        ax.text(x, y, n, fontsize=8, ha='right')
-    ax.set_title('Parametrų skaičius vs tikslumas')
-    ax.set_xlabel('Parametrų skaičius')
-    ax.set_ylabel('Tikslumas')
-    ax.grid(True)
-    _save_plot(fig, 'architecture', name, 'params')
+    _plot_scatter(
+        labels, params, accs,
+        'Parametrų skaičius vs tikslumas',
+        'Parametrų skaičius', 'Tikslumas',
+        'architecture', name, 'params'
+    )
+
     _plot_bar(labels, [r['inference_latency'] for r in runs],
               'Inferencijos vėlinimas (ms)', 'Architektūra', 'Milisekundės',
               'architecture', name, 'latency')
+
     values = [
-        sum(r['epoch_time_curve'][: next((i for i, v in enumerate(r['val_accuracy_curve'], 1) if v >= acc_target),
+        sum(r['epoch_time_curve'][: next((i for i, v in enumerate(r['val_accuracy_curve'], 1)
+                                          if v >= acc_target),
                                          len(r['val_accuracy_curve']))])
         for r in runs
     ]
@@ -204,7 +256,7 @@ def plot_confusion_matrix(model, loader, device, classes):
         for imgs, lbls in loader:
             imgs = imgs.to(device)
             out = model(imgs).argmax(dim=1).cpu().numpy()
-            preds.extend(out);
+            preds.extend(out)
             labels.extend(lbls.numpy())
     cm = confusion_matrix(labels, preds)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
