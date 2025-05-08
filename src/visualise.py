@@ -119,38 +119,38 @@ def _plot_scatter(labels, xs, ys,
 
 def plot_learning_rate_comparison(runs, name):
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'learning_rate', name + 'train_loss')
+               'Epochos', 'Nuostolis', 'learning_rate', name + '_train_loss')
     _plot_line(runs, 'train_accuracy_curve', 'Mokymo tikslumas per epochas',
-               'Epochos', 'Tikslumas', 'learning_rate', name + 'train_acc')
+               'Epochos', 'Tikslumas', 'learning_rate', name + '_train_acc')
 
 
 def plot_optimizer_comparison(runs, name):
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'optimizer', 'train_loss')
+               'Epochos', 'Nuostolis', 'optimizer', '_train_loss')
     _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis pername +  epochas',
-               'Epochos', 'Nuostolis', 'optimizer', name + 'val_loss')
+               'Epochos', 'Nuostolis', 'optimizer', name + '_val_loss')
     _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
-               'Epochos', 'Tikslumas', 'optimizer', name + 'val_acc')
+               'Epochos', 'Tikslumas', 'optimizer', name + '_val_acc')
 
 
 def plot_scheduler_comparison(runs, name):
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'scheduler', name + 'train_loss')
+               'Epochos', 'Nuostolis', 'scheduler', name + '_train_loss')
     _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'scheduler', name + 'val_loss')
+               'Epochos', 'Nuostolis', 'scheduler', name + '_val_loss')
     _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
-               'Epochos', 'Tikslumas', 'scheduler', name + 'val_acc')
+               'Epochos', 'Tikslumas', 'scheduler', name + '_val_acc')
     _plot_line(runs, 'lr_curve', 'Mokymosi greitis per epochas',
-               'Epochos', 'Greičio koeficientas', 'scheduler', name + 'lr')
+               'Epochos', 'Greičio koeficientas', 'scheduler', name + '_lr')
 
 
 def plot_regularization_comparison(runs, name):
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'regularization', name + 'train_loss')
+               'Epochos', 'Nuostolis', 'regularization', name + '_train_loss')
     _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'regularization', name + 'val_loss')
+               'Epochos', 'Nuostolis', 'regularization', name + '_val_loss')
     _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
-               'Epochos', 'Tikslumas', 'regularization', name + 'val_acc')
+               'Epochos', 'Tikslumas', 'regularization', name + '_val_acc')
     labels = [r['name'] for r in runs]
     values = [
         sum(r['train_accuracy_curve'][i] - r['val_accuracy_curve'][i]
@@ -158,7 +158,7 @@ def plot_regularization_comparison(runs, name):
         for r in runs
     ]
     _plot_bar(labels, values, 'Bendroji spraga mokymas–validavimas',
-              'Regularizacija', 'Spraga', 'regularization', name + 'gap')
+              'Regularizacija', 'Spraga', 'regularization', name + '_gap')
 
 
 def plot_batch_size_comparison(runs, name):
