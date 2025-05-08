@@ -126,7 +126,7 @@ def plot_learning_rate_comparison(runs, name):
 
 def plot_optimizer_comparison(runs, name):
     _plot_line(runs, 'train_loss_curve', 'Mokymo nuostolis per epochas',
-               'Epochos', 'Nuostolis', 'optimizer', '_train_loss')
+               'Epochos', 'Nuostolis', 'optimizer', name + '_train_loss')
     _plot_line(runs, 'val_loss_curve', 'Validavimo nuostolis pername +  epochas',
                'Epochos', 'Nuostolis', 'optimizer', name + '_val_loss')
     _plot_line(runs, 'val_accuracy_curve', 'Validavimo tikslumas per epochas',
