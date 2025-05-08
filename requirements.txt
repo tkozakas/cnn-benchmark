@@ -45,3 +45,4 @@ zipp
 opt_einsum
 typing_extensions
 importlib_resources
+optuna
