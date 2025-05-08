@@ -194,7 +194,7 @@ def main():
         )
         for name, lr in lr_map.items()
     ]
-    plot_learning_rate_comparison(runs)
+    plot_learning_rate_comparison(runs, 'learning_rate_comparison')
 
     # 2) Optimizer Comparison
     print("Running optimizer comparison...")
@@ -217,7 +217,7 @@ def main():
         for name, opt_fn in optim_map.items()
     ]
     save_test_data(runs, '../test_data/optimizer_comparison.csv')
-    plot_optimizer_comparison(runs)
+    plot_optimizer_comparison(runs, 'optimizer_comparison')
     best_opt = max(runs, key=lambda r: r['test_f1_score'])['name']
     best_opt_fn = optim_map[best_opt]
     print(f"Best optimizer: {best_opt}")
@@ -243,7 +243,7 @@ def main():
         for name, scheduler in sched_map.items()
     ]
     save_test_data(runs, '../test_data/scheduler_comparison.csv')
-    plot_scheduler_comparison(runs)
+    plot_scheduler_comparison(runs, 'scheduler_comparison')
     best_sched = max(runs, key=lambda r: r['test_f1_score'])['name']
     best_sched_fn = sched_map[best_sched]
     print(f"Best scheduler: {best_sched}")
@@ -271,7 +271,7 @@ def main():
         for name, wd in reg_map.items()
     ]
     save_test_data(runs, '../test_data/regularization_comparison.csv')
-    plot_regularization_comparison(runs)
+    plot_regularization_comparison(runs, 'regularization_comparison')
     best_reg = max(runs, key=lambda r: r['test_f1_score'])['name']
     best_wd  = reg_map[best_reg]
     print(f"Best weight decay: {best_reg}")
@@ -293,7 +293,7 @@ def main():
         for b in batch_sizes
     ]
     save_test_data(runs_bs, '../test_data/batch_size_comparison.csv')
-    plot_batch_size_comparison(runs_bs)
+    plot_batch_size_comparison(runs_bs, 'batch_size_comparison')
     best_bs = max(runs_bs, key=lambda r: r['test_f1_score'])['batch_size']
     print(f"Best batch size: {best_bs}")
 
@@ -319,7 +319,7 @@ def main():
         )
         for name, act_fn in act_map.items()
     ]
-    plot_activation_function_comparison(runs)
+    plot_activation_function_comparison(runs, 'activation_function_comparison')
     best_act = max(runs, key=lambda r: r['test_f1_score'])['name']
     print(f"Best configuration ->  "
           f"Architecture: {ARCHITECTURE}, "
@@ -353,7 +353,7 @@ def main():
         for arch in archs
     ]
     save_test_data(runs, '../test_data/architecture_comparison.csv')
-    plot_architecture_comparison(runs)
+    plot_architecture_comparison(runs, 'architecture_comparison')
     best_run = sorted(
         runs,
         key=lambda r: (
@@ -364,7 +364,7 @@ def main():
 
     # 8) Plot of the best architecture by fold F1 score
     plot_architecture_by_fold(
-        best_run['folds_data']
+        best_run['folds_data'], best_run['name'].lower(),
     )
 
     # 9) Auto-tune core hyperparameters with Optuna
@@ -416,13 +416,13 @@ def main():
         )
         for arch in archs
     ]
-    plot_architecture_comparison(runs)
+    plot_architecture_comparison(runs, 'architecture_comparison_hpo')
     best_run = sorted(
         runs,
         key=lambda r: (r['param_count'], -r['test_f1_score'])
     )[0]
     plot_architecture_by_fold(
-        best_run['folds_data']
+        best_run['folds_data'], best_run['name'].lower(),
     )
 
 
