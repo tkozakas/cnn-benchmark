@@ -8,7 +8,7 @@ from matplotlib.ticker import FuncFormatter
 from sklearn.metrics import confusion_matrix
 
 BASE_DIR = "../test_data/plot"
-CSV_DIR = "../test_data/plot_csv"
+CSV_DIR = "../test_data/plot"
 
 
 def _ensure_dir(path):
