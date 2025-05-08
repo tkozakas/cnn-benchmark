@@ -40,7 +40,7 @@ def parse_args(args):
     DEVICE       = args['--device']
     EMNIST_TYPE  = args['--emnist-type']
 
-    K = None if args['--k-folds'] is None or args['--k-folds'].lower() == 'none' else int(args['--k-folds'])
+    K = None if args['--k-folds'] is None or args['--k-folds'] == 1 or args['--k-folds'].lower() == 'none' else int(args['--k-folds'])
     PAT = None if args['--patience'] is None or args['--patience'].lower() == 'none' else int(args['--patience'])
     SUBSAMPLE_SIZE = None if args['--subsample-size'] is None or args['--subsample-size'].lower() == 'none' else int(
         args['--subsample-size'])
