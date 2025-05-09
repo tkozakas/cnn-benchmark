@@ -83,17 +83,21 @@ def _plot_bar(labels, values, title, xlabel, ylabel, category, suffix):
     _save_csv_bar(labels, values, category, suffix)
 
 
-def _plot_folds(folds_data, metric_key, title, xlabel, ylabel, category, suffix):
+def _plot_folds(folds_data, metric_key, title, xlabel, ylabel, category, name, suffix):
+    max_epochs = max(len(f[metric_key]) for f in folds_data)
     fig, ax = plt.subplots(figsize=(10, 6))
-    epochs = range(1, len(folds_data[0][metric_key]) + 1)
-    for idx, f in enumerate(folds_data, 1):
-        ax.plot(epochs, f[metric_key], label=f'Fold {idx}')
+
+    for idx, f in enumerate(folds_data, start=1):
+        data = f[metric_key]
+        padded = data + [data[-1]] * (max_epochs - len(data))
+        ax.plot(range(1, max_epochs + 1), padded, label=f'Fold {idx}')
+
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.grid(True)
     ax.legend(title='Foldas', fontsize='small')
-    _save_plot(fig, category, suffix)
+    _save_plot(fig, category, name + '_' + suffix)
 
 
 def _plot_scatter(labels, xs, ys,
