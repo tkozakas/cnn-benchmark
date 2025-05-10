@@ -14,168 +14,190 @@ Options:
   --emnist-type=<type>      EMNIST split to use (letters/digits/balanced) [default: balanced].
 """
 import random
-
-import cv2
 import math
+import cv2
 import numpy as np
-import pytesseract
 import torch
 from PIL import Image
 from docopt import docopt
 from matplotlib import pyplot as plt
-from torchvision import transforms, datasets
+from torchvision import datasets, transforms
 
 from model import get_model
 from utility import get_transforms, get_emnist_class_num
 
 transform = get_transforms()
-
+raw_transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=1),
+    transforms.ToTensor()
+])
 
 def load_trained_model(arch, emnist_type, model_path, device):
     model = get_model(arch, num_classes=get_emnist_class_num(emnist_type)).to(device)
-    ckpt = torch.load(model_path, map_location=device)
+    ckpt = torch.load(model_path, map_location=device, weights_only=True)
     model.load_state_dict(ckpt)
     model.eval()
     return model
 
-
-def segment_characters(image_np, padding=10):
-    _, binary = cv2.threshold(
-        image_np, 0, 255,
-        cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU
+def segment_characters(image_np, padding=5, min_area=100, max_area=5000):
+    blur = cv2.GaussianBlur(image_np, (5, 5), 0)
+    th = cv2.adaptiveThreshold(
+        blur, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        blockSize=11, C=2
     )
-    contours, _ = cv2.findContours(
-        binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
-    contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[0])
-
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    clean = cv2.morphologyEx(th, cv2.MORPH_OPEN, kernel, iterations=1)
+    clean = cv2.morphologyEx(clean, cv2.MORPH_CLOSE, kernel, iterations=1)
+    dist = cv2.distanceTransform(clean, cv2.DIST_L2, 5)
+    _, fg = cv2.threshold(dist, 0.4 * dist.max(), 255, cv2.THRESH_BINARY)
+    fg = np.uint8(fg)
+    bg = cv2.dilate(clean, kernel, iterations=2)
+    unknown = cv2.subtract(bg, fg)
+    _, markers = cv2.connectedComponents(fg)
+    markers = markers + 1
+    markers[unknown == 255] = 0
+    markers = cv2.watershed(cv2.cvtColor(image_np, cv2.COLOR_GRAY2BGR), markers)
     crops = []
-    for c in contours:
-        x, y, w, h = cv2.boundingRect(c)
-        if w < 5 or h < 10:
+    for lbl in range(2, markers.max() + 1):
+        mask = (markers == lbl).astype('uint8') * 255
+        cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not cnts:
             continue
-        x0 = max(0, x - padding)
-        y0 = max(0, y - padding)
-        x1 = min(binary.shape[1], x + w + padding)
-        y1 = min(binary.shape[0], y + h + padding)
-
-        crop = binary[y0:y1, x0:x1]
-        crop = cv2.copyMakeBorder(crop, 5, 5, 5, 5,
-                                  cv2.BORDER_CONSTANT, value=[0])
-        crop = cv2.resize(crop, (28, 28),
-                          interpolation=cv2.INTER_AREA)
+        x, y, w, h = cv2.boundingRect(cnts[0])
+        area = w * h
+        if area < min_area or area > max_area:
+            continue
+        x0, y0 = max(0, x - padding), max(0, y - padding)
+        x1 = min(clean.shape[1], x + w + padding)
+        y1 = min(clean.shape[0], y + h + padding)
+        crop = clean[y0:y1, x0:x1]
+        crop = cv2.resize(crop, (28, 28), interpolation=cv2.INTER_AREA)
         crops.append(crop)
+    if not crops:
+        cnts, _ = cv2.findContours(clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for c in cnts:
+            x, y, w, h = cv2.boundingRect(c)
+            area = w * h
+            if area < min_area or area > max_area:
+                continue
+            x0, y0 = max(0, x - padding), max(0, y - padding)
+            x1 = min(clean.shape[1], x + w + padding)
+            y1 = min(clean.shape[0], y + h + padding)
+            crop = clean[y0:y1, x0:x1]
+            crop = cv2.resize(crop, (28, 28), interpolation=cv2.INTER_AREA)
+            crops.append(crop)
     return crops
-
 
 def predict_character(model, tensor, device):
     with torch.no_grad():
         out = model(tensor.to(device))
         probs = torch.nn.functional.softmax(out, dim=1)
-        cls = int(torch.argmax(probs, dim=1).item())
+        cls = int(probs.argmax(dim=1).item())
         conf = float(probs[0, cls].item())
     return cls, conf
-
 
 def process_and_predict(model, pil_img, device):
     gray = np.array(pil_img)
     char_imgs = segment_characters(gray)
     preds = []
-
-    for img in char_imgs:
-        pil_c = Image.fromarray(img)
-        t = transform(pil_c).unsqueeze(0)
+    for raw in char_imgs:
+        t = transform(Image.fromarray(raw)).unsqueeze(0)
         cls, conf = predict_character(model, t, device)
-
-        _, thresh = cv2.threshold(
-            img, 0, 255,
-            cv2.THRESH_BINARY + cv2.THRESH_OTSU
-        )
-        txt = pytesseract.image_to_string(
-            Image.fromarray(thresh),
-            config="--psm 10"
-        ).strip()
-
         preds.append({
-            "char_img": img,
+            "char_img": raw,
             "pytorch": {"class": cls, "confidence": conf},
-            "tesseract": txt
         })
     return preds
 
-
-def display_predictions(preds, cols=5):
-    n = len(preds)
-    rows = math.ceil(n / cols)
-    plt.figure(figsize=(cols * 3, rows * 3))
+def display_predictions(preds, classes, rows=2, cols=5, flip=False, rotate_k=0):
+    fig = plt.figure(figsize=(cols * 3, rows * 3))
     for i, p in enumerate(preds):
-        plt.subplot(rows, cols, i + 1)
-        plt.imshow(p["char_img"], cmap="gray")
-        plt.title(
-            f"PT: {p['pytorch']['class']} ({p['pytorch']['confidence']:.2f})\n"
-            f"TESS: {p['tesseract']}"
-        )
-        plt.axis("off")
+        arr = p["char_img"]
+        if flip:
+            arr = np.fliplr(arr)
+        if rotate_k:
+            arr = np.rot90(arr, k=rotate_k)
+        ax = fig.add_subplot(rows, cols, i + 1)
+        ax.imshow(arr, cmap="gray")
+        lbl = p["pytorch"]["class"]
+        title_lines = [
+            f"True:  {p.get('sample_true', '?')} ({lbl})",
+            f"PyT:   {classes[lbl]} ({p['pytorch']['confidence']:.2f})"
+        ]
+        ax.set_title("\n".join(title_lines), fontsize=10)
+        ax.axis("off")
+    for j in range(len(preds), rows * cols):
+        fig.add_subplot(rows, cols, j + 1).axis("off")
     plt.tight_layout()
     plt.show()
 
-
-def preview_emnist(split, n=10):
-    # load raw EMNIST just to preview examples side by side
+def preview_emnist(split, rows=2, cols=5):
     ds = datasets.EMNIST(
-        root="../data",
-        split=split,
-        train=True,
-        download=False,
+        root="../data", split=split,
+        train=True, download=False,
         transform=transforms.ToTensor()
     )
+    classes = ds.classes
+    n = rows * cols
     samples = random.sample(range(len(ds)), n)
-    plt.figure(figsize=(15, 6))
-    for idx, i in enumerate(samples):
-        img, lbl = ds[i]
-        plt.subplot(2, n, idx + 1)
-        plt.imshow(img.permute(1, 2, 0).squeeze(), cmap="gray")
-        plt.title(f"Label: {lbl}")
-        plt.axis("off")
-
-        plt.subplot(2, n, n + idx + 1)
-        pil = Image.fromarray((img.permute(1, 2, 0).numpy() * 255).astype(np.uint8))
-        p = transform(pil)
-        plt.imshow(p.permute(1, 2, 0).squeeze(), cmap="gray")
-        plt.axis("off")
-    plt.suptitle("EMNIST Raw vs. Transformed")
+    fig = plt.figure(figsize=(cols * 3, rows * 3))
+    for i, idx in enumerate(samples):
+        img, lbl = ds[idx]
+        img = np.rot90(np.fliplr(img.squeeze().numpy()), k=1)
+        ax = fig.add_subplot(rows, cols, i + 1)
+        ax.imshow(img, cmap="gray")
+        ax.set_title(f"{classes[lbl]} ({lbl})", fontsize=10)
+        ax.axis("off")
     plt.tight_layout()
     plt.show()
-
 
 if __name__ == "__main__":
     args = docopt(__doc__)
-    MODEL_PATH = args["<model_path>"]
-    IMAGE_PATH = args["<image_path>"]
-    DEVICE = args["--device"]
-    ARCHITECTURE = args["--architecture"]
+    MODEL_PATH  = args["<model_path>"]
+    IMAGE_PATH  = args["<image_path>"]
+    DEVICE      = args["--device"]
+    ARCH        = args["--architecture"]
     EMNIST_TYPE = args["--emnist-type"]
-
     device = torch.device(DEVICE)
 
-    # 1) Preview a few raw vs. preprocessed EMNIST examples
-    preview_emnist(EMNIST_TYPE, n=10)
+    preview_emnist(EMNIST_TYPE, rows=2, cols=5)
 
-    # 2) Process a random batch from EMNIST and show PyTorch predictions
-    model = load_trained_model(ARCHITECTURE, EMNIST_TYPE, MODEL_PATH, device)
-    ds = datasets.EMNIST(
-        root="../data",
-        split=EMNIST_TYPE,
-        train=True, download=True,
+    model = load_trained_model(ARCH, EMNIST_TYPE, MODEL_PATH, device)
+
+    raw_ds = datasets.EMNIST(
+        root="../data", split=EMNIST_TYPE,
+        train=True, download=False,
+        transform=raw_transform
+    )
+    aug_ds = datasets.EMNIST(
+        root="../data", split=EMNIST_TYPE,
+        train=True, download=False,
         transform=transform
     )
-    process_and_predict_ds = lambda count=20: [
-        # pick random idx and predict
-        predict_character(model, ds[idx][0].unsqueeze(0), device)
-        for idx in random.sample(range(len(ds)), count)
-    ]
+    classes = raw_ds.classes
+    samples = random.sample(range(len(raw_ds)), 10)
+    preds = []
+    for idx in samples:
+        raw_t, lbl = raw_ds[idx]
+        aug_t, _ = aug_ds[idx]
+        cls, conf = predict_character(model, aug_t.unsqueeze(0), device)
+        arr = (raw_t.squeeze().numpy() * 255).astype(np.uint8)
+        preds.append({
+            "char_img": arr,
+            "sample_true": classes[lbl],
+            "pytorch": {"class": cls, "confidence": conf},
+        })
+    display_predictions(preds, classes, rows=2, cols=5, flip=True, rotate_k=1)
 
-    # 3) Finally segment & predict your custom image
     img = Image.open(IMAGE_PATH).convert("L")
     predictions = process_and_predict(model, img, device)
-    display_predictions(predictions, cols=5)
+    wrapped = [{
+        "char_img":    p["char_img"],
+        "sample_true": "?",
+        "pytorch":     p["pytorch"],
+    } for p in predictions]
+    cols = 5
+    rows = math.ceil(len(wrapped) / cols)
+    display_predictions(wrapped, classes, rows=rows, cols=cols)
