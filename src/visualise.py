@@ -242,7 +242,7 @@ def plot_activation_function_comparison(runs, name):
 
 
 def plot_confusion_matrix(model, loader, device, classes):
-    fig, ax = plt.subplots(figsize=(8, 8))
+    fig, ax = plt.subplots(figsize=(12, 12))
     preds, labels = [], []
     model.eval()
     model.to(device)
@@ -254,7 +254,9 @@ def plot_confusion_matrix(model, loader, device, classes):
             labels.extend(lbls.numpy())
     cm = confusion_matrix(labels, preds)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=classes, yticklabels=classes, ax=ax)
+                xticklabels=classes, yticklabels=classes, ax=ax,
+                annot_kws={"size": 8})
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
     ax.set_xlabel('Prognozuojama klasė')
     ax.set_ylabel('Tikroji klasė')
     ax.set_title('Sumaišties matrica')

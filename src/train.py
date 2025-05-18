@@ -44,6 +44,7 @@ from torchvision import datasets
 
 from config import train_config, model_config
 from model import get_model, save_model, load_model
+from src import utility
 from utility import get_transforms, get_emnist_class_num
 from utility import parse_args, get_subsample
 from visualise import (
@@ -372,7 +373,7 @@ def main():
     )
     plot_confusion_matrix(
         model, test_loader, DEVICE,
-        classes=list(range(model_config[ARCHITECTURE]["num_classes"]))
+        classes=list(range(utility.get_emnist_class_num(EMNIST_TYPE) + 1))
     )
     test_loss, test_acc, tp, fp, precision, sensitivity, f1_score = evaluate_and_metrics(
         model, test_loader, nn.CrossEntropyLoss(), DEVICE
